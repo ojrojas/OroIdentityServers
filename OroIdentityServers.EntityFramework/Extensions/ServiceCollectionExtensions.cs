@@ -313,11 +313,11 @@ public static class ModelBuilderExtensions
             entity.Property(e => e.EntityType).IsRequired().HasMaxLength(100);
             entity.Property(e => e.EntityId).IsRequired().HasMaxLength(200);
             entity.Property(e => e.ChangeType).IsRequired().HasMaxLength(50);
-            entity.Property(e => e.ChangeTime).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.ChangeTime).HasDefaultValueSql("datetime('now')");
             entity.Property(e => e.ChangedBy).HasMaxLength(200);
             entity.Property(e => e.ChangeDescription).HasMaxLength(1000);
-            entity.Property(e => e.OldValues).HasColumnType("nvarchar(max)");
-            entity.Property(e => e.NewValues).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.OldValues).HasColumnType("TEXT");
+            entity.Property(e => e.NewValues).HasColumnType("TEXT");
 
             // Index
             entity.HasIndex(e => e.ChangeTime);

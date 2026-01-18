@@ -3,24 +3,19 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using OroIdentityServers.Core;
 using OroIdentityServers.OAuth;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace OroIdentityServers;
 
 public class TokenEndpointMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IClientStore _clientStore;
-    private readonly IUserStore _userStore;
-    private readonly IPersistedGrantStore _grantStore;
-    private readonly TokenService _tokenService;
+    private readonly IServiceProvider _serviceProvider;
 
-    public TokenEndpointMiddleware(RequestDelegate next, IClientStore clientStore, IUserStore userStore, IPersistedGrantStore grantStore, TokenService tokenService)
+    public TokenEndpointMiddleware(RequestDelegate next, IServiceProvider serviceProvider)
     {
         _next = next;
-        _clientStore = clientStore;
-        _userStore = userStore;
-        _grantStore = grantStore;
-        _tokenService = tokenService;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -37,12 +32,17 @@ public class TokenEndpointMiddleware
 
     private async Task HandleTokenRequestAsync(HttpContext context)
     {
+        using var scope = _serviceProvider.CreateScope();
+        var clientStore = scope.ServiceProvider.GetRequiredService<IClientStore>();
+        var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+        var grantStore = scope.ServiceProvider.GetRequiredService<IPersistedGrantStore>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
         var form = await context.Request.ReadFormAsync();
         var grantType = form["grant_type"].ToString();
         var clientId = form["client_id"].ToString();
         var clientSecret = form["client_secret"].ToString();
 
-        var client = await _clientStore.FindClientByIdAsync(clientId);
+        var client = await clientStore.FindClientByIdAsync(clientId);
         if (client == null || client.ClientSecret != clientSecret)
         {
             context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
@@ -53,16 +53,16 @@ public class TokenEndpointMiddleware
         switch (grantType)
         {
             case "client_credentials":
-                await HandleClientCredentialsGrantAsync(context, client);
+                await HandleClientCredentialsGrantAsync(context, client, _serviceProvider);
                 break;
             case "authorization_code":
-                await HandleAuthorizationCodeGrantAsync(context, client, form);
+                await HandleAuthorizationCodeGrantAsync(context, client, form, _serviceProvider);
                 break;
             case "refresh_token":
-                await HandleRefreshTokenGrantAsync(context, client, form);
+                await HandleRefreshTokenGrantAsync(context, client, form, _serviceProvider);
                 break;
             case "password":
-                await HandlePasswordGrantAsync(context, client, form);
+                await HandlePasswordGrantAsync(context, client, form, _serviceProvider);
                 break;
             default:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -71,9 +71,11 @@ public class TokenEndpointMiddleware
         }
     }
 
-    private async Task HandleClientCredentialsGrantAsync(HttpContext context, Client client)
+    private async Task HandleClientCredentialsGrantAsync(HttpContext context, Client client, IServiceProvider serviceProvider)
     {
-        var token = _tokenService.GenerateAccessToken(client, "client", client.AllowedScopes);
+        using var scope = serviceProvider.CreateScope();
+        var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
+        var token = tokenService.GenerateAccessToken(client, "client", client.AllowedScopes);
         var response = new
         {
             access_token = token,
@@ -84,13 +86,17 @@ public class TokenEndpointMiddleware
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
 
-    private async Task HandleAuthorizationCodeGrantAsync(HttpContext context, Client client, IFormCollection form)
+    private async Task HandleAuthorizationCodeGrantAsync(HttpContext context, Client client, IFormCollection form, IServiceProvider serviceProvider)
     {
+        using var scope = serviceProvider.CreateScope();
+        var grantStore = scope.ServiceProvider.GetRequiredService<IPersistedGrantStore>();
+        var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
         var code = form["code"].ToString();
         var redirectUri = form["redirect_uri"].ToString();
         var codeVerifier = form["code_verifier"].ToString();
 
-        var grant = await _grantStore.GetAuthorizationCodeAsync(code);
+        var grant = await grantStore.GetAuthorizationCodeAsync(code);
         if (grant == null || grant.ClientId != client.ClientId || grant.RedirectUri != redirectUri)
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -128,9 +134,9 @@ public class TokenEndpointMiddleware
             }
         }
 
-        await _grantStore.RemoveAuthorizationCodeAsync(code);
+        await grantStore.RemoveAuthorizationCodeAsync(code);
 
-        var user = await _userStore.FindUserByIdAsync(grant.UserId);
+        var user = await userStore.FindUserByIdAsync(grant.UserId);
         if (user == null)
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -138,11 +144,11 @@ public class TokenEndpointMiddleware
             return;
         }
 
-        var accessToken = _tokenService.GenerateAccessToken(client, user.Id, grant.Scopes);
-        var idToken = _tokenService.GenerateIdToken(user, client.ClientId, ""); // simplified nonce
-        var refreshToken = _tokenService.GenerateRefreshToken();
+        var accessToken = tokenService.GenerateAccessToken(client, user.Id, grant.Scopes);
+        var idToken = tokenService.GenerateIdToken(user, client.ClientId, ""); // simplified nonce
+        var refreshToken = tokenService.GenerateRefreshToken();
 
-        await _grantStore.StoreRefreshTokenAsync(refreshToken, client.ClientId, user.Id, grant.Scopes);
+        await grantStore.StoreRefreshTokenAsync(refreshToken, client.ClientId, user.Id, grant.Scopes);
 
         var response = new
         {
@@ -156,11 +162,15 @@ public class TokenEndpointMiddleware
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
 
-    private async Task HandleRefreshTokenGrantAsync(HttpContext context, Client client, IFormCollection form)
+    private async Task HandleRefreshTokenGrantAsync(HttpContext context, Client client, IFormCollection form, IServiceProvider serviceProvider)
     {
+        using var scope = serviceProvider.CreateScope();
+        var grantStore = scope.ServiceProvider.GetRequiredService<IPersistedGrantStore>();
+        var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
         var refreshToken = form["refresh_token"].ToString();
 
-        var grant = await _grantStore.GetRefreshTokenAsync(refreshToken);
+        var grant = await grantStore.GetRefreshTokenAsync(refreshToken);
         if (grant == null || grant.ClientId != client.ClientId)
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -168,7 +178,7 @@ public class TokenEndpointMiddleware
             return;
         }
 
-        var user = await _userStore.FindUserByIdAsync(grant.UserId);
+        var user = await userStore.FindUserByIdAsync(grant.UserId);
         if (user == null)
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -176,11 +186,11 @@ public class TokenEndpointMiddleware
             return;
         }
 
-        var accessToken = _tokenService.GenerateAccessToken(client, user.Id, grant.Scopes);
-        var newRefreshToken = _tokenService.GenerateRefreshToken();
+        var accessToken = tokenService.GenerateAccessToken(client, user.Id, grant.Scopes);
+        var newRefreshToken = tokenService.GenerateRefreshToken();
 
-        await _grantStore.RemoveRefreshTokenAsync(refreshToken);
-        await _grantStore.StoreRefreshTokenAsync(newRefreshToken, client.ClientId, user.Id, grant.Scopes);
+        await grantStore.RemoveRefreshTokenAsync(refreshToken);
+        await grantStore.StoreRefreshTokenAsync(newRefreshToken, client.ClientId, user.Id, grant.Scopes);
 
         var response = new
         {
@@ -193,12 +203,16 @@ public class TokenEndpointMiddleware
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
     }
 
-    private async Task HandlePasswordGrantAsync(HttpContext context, Client client, IFormCollection form)
+    private async Task HandlePasswordGrantAsync(HttpContext context, Client client, IFormCollection form, IServiceProvider serviceProvider)
     {
+        using var scope = serviceProvider.CreateScope();
+        var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
+        var grantStore = scope.ServiceProvider.GetRequiredService<IPersistedGrantStore>();
         var username = form["username"].ToString();
         var password = form["password"].ToString();
 
-        var user = await _userStore.FindUserByUsernameAsync(username);
+        var user = await userStore.FindUserByUsernameAsync(username);
         if (user == null || !user.ValidatePassword(password))
         {
             context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
@@ -206,10 +220,10 @@ public class TokenEndpointMiddleware
             return;
         }
 
-        var accessToken = _tokenService.GenerateAccessToken(client, user.Id, client.AllowedScopes);
-        var refreshToken = _tokenService.GenerateRefreshToken();
+        var accessToken = tokenService.GenerateAccessToken(client, user.Id, client.AllowedScopes);
+        var refreshToken = tokenService.GenerateRefreshToken();
 
-        await _grantStore.StoreRefreshTokenAsync(refreshToken, client.ClientId, user.Id, client.AllowedScopes);
+        await grantStore.StoreRefreshTokenAsync(refreshToken, client.ClientId, user.Id, client.AllowedScopes);
 
         var response = new
         {

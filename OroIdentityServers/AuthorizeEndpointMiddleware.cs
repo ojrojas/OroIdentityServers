@@ -1,23 +1,18 @@
 using Microsoft.AspNetCore.Http;
 using OroIdentityServers.Core;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace OroIdentityServers;
 
 public class AuthorizeEndpointMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IClientStore _clientStore;
-    private readonly IUserStore _userStore;
-    private readonly IPersistedGrantStore _grantStore;
-    private readonly TokenService _tokenService;
+    private readonly IServiceProvider _serviceProvider;
 
-    public AuthorizeEndpointMiddleware(RequestDelegate next, IClientStore clientStore, IUserStore userStore, IPersistedGrantStore grantStore, TokenService tokenService)
+    public AuthorizeEndpointMiddleware(RequestDelegate next, IServiceProvider serviceProvider)
     {
         _next = next;
-        _clientStore = clientStore;
-        _userStore = userStore;
-        _grantStore = grantStore;
-        _tokenService = tokenService;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -34,16 +29,21 @@ public class AuthorizeEndpointMiddleware
 
     private async Task HandleAuthorizeRequestAsync(HttpContext context)
     {
+        using var scope = _serviceProvider.CreateScope();
+        var clientStore = scope.ServiceProvider.GetRequiredService<IClientStore>();
+        var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+        var grantStore = scope.ServiceProvider.GetRequiredService<IPersistedGrantStore>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
         var query = context.Request.Query;
         var clientId = query["client_id"].ToString();
         var responseType = query["response_type"].ToString();
         var redirectUri = query["redirect_uri"].ToString();
-        var scope = query["scope"].ToString();
+        var scopeParam = query["scope"].ToString();
         var state = query["state"].ToString();
         var codeChallenge = query["code_challenge"].ToString();
         var codeChallengeMethod = query["code_challenge_method"].ToString();
 
-        var client = await _clientStore.FindClientByIdAsync(clientId);
+        var client = await clientStore.FindClientByIdAsync(clientId);
         if (client == null || !client.RedirectUris.Contains(redirectUri) || responseType != "code")
         {
             context.Response.StatusCode = 400;
@@ -82,7 +82,7 @@ public class AuthorizeEndpointMiddleware
             return;
         }
 
-        var user = await _userStore.FindUserByIdAsync(userId);
+        var user = await userStore.FindUserByIdAsync(userId);
         if (user == null)
         {
             context.Response.StatusCode = 401;
@@ -90,9 +90,9 @@ public class AuthorizeEndpointMiddleware
             return;
         }
 
-        var scopes = scope.Split(' ');
-        var code = _tokenService.GenerateAuthorizationCode();
-        await _grantStore.StoreAuthorizationCodeAsync(code, clientId, userId, redirectUri, scopes, codeChallenge, codeChallengeMethod);
+        var scopes = scopeParam.Split(' ');
+        var code = tokenService.GenerateAuthorizationCode();
+        await grantStore.StoreAuthorizationCodeAsync(code, clientId, userId, redirectUri, scopes, codeChallenge, codeChallengeMethod);
 
         var redirectUrl = $"{redirectUri}?code={code}&state={state}";
         context.Response.Redirect(redirectUrl);

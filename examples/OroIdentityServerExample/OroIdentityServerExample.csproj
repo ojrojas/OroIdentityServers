@@ -6,8 +6,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="EFExample\**" />
+    <Content Remove="EFExample\**" />
+    <EmbeddedResource Remove="EFExample\**" />
+    <None Remove="EFExample\**" />
+    <Compile Remove="IntegratedDbContext\**" />
+    <Content Remove="IntegratedDbContext\**" />
+    <EmbeddedResource Remove="IntegratedDbContext\**" />
+    <None Remove="IntegratedDbContext\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2" />
   </ItemGroup>
 
   <PropertyGroup>

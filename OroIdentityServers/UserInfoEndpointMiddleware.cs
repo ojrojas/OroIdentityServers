@@ -3,20 +3,19 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using OroIdentityServers.Core;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace OroIdentityServers;
 
 public class UserInfoEndpointMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly IUserStore _userStore;
-    private readonly TokenService _tokenService;
+    private readonly IServiceProvider _serviceProvider;
 
-    public UserInfoEndpointMiddleware(RequestDelegate next, IUserStore userStore, TokenService tokenService)
+    public UserInfoEndpointMiddleware(RequestDelegate next, IServiceProvider serviceProvider)
     {
         _next = next;
-        _userStore = userStore;
-        _tokenService = tokenService;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -33,6 +32,9 @@ public class UserInfoEndpointMiddleware
 
     private async Task HandleUserInfoRequestAsync(HttpContext context)
     {
+        using var scope = _serviceProvider.CreateScope();
+        var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+        var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
         var authHeader = context.Request.Headers["Authorization"].ToString();
         if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
         {
@@ -53,7 +55,7 @@ public class UserInfoEndpointMiddleware
             return;
         }
 
-        var user = await _userStore.FindUserByIdAsync(userId);
+        var user = await userStore.FindUserByIdAsync(userId);
         if (user == null)
         {
             context.Response.StatusCode = 404;
