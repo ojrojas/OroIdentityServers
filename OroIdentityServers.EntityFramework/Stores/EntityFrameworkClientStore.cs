@@ -10,13 +10,13 @@ namespace OroIdentityServers.EntityFramework.Stores;
 
 public class EntityFrameworkClientStore : IClientStore
 {
-    private readonly OroIdentityServerDbContext _context;
+    private readonly IOroIdentityServerDbContext _context;
     private readonly IDistributedCache? _cache;
     private readonly IConfigurationChangeNotifier? _eventNotifier;
     private readonly ConcurrentDictionary<string, Client> _clientCache = new();
 
     public EntityFrameworkClientStore(
-        OroIdentityServerDbContext context,
+        IOroIdentityServerDbContext context,
         IDistributedCache? cache = null,
         IConfigurationChangeNotifier? eventNotifier = null)
     {
@@ -145,6 +145,10 @@ public class EntityFrameworkClientStore : IClientStore
         _context.Clients.Add(entity);
         await _context.SaveChangesAsync();
 
+        // Log configuration change
+        await LogConfigurationChangeAsync("Client", entity.Id.ToString(), "Create", null,
+            System.Text.Json.JsonSerializer.Serialize(entity), changedBy);
+
         // Invalidate cache
         await InvalidateClientCacheAsync(client.ClientId);
 
@@ -228,6 +232,11 @@ public class EntityFrameworkClientStore : IClientStore
 
         await _context.SaveChangesAsync();
 
+        // Log configuration change
+        await LogConfigurationChangeAsync("Client", entity.Id.ToString(), "Update",
+            System.Text.Json.JsonSerializer.Serialize(oldClient),
+            System.Text.Json.JsonSerializer.Serialize(client), changedBy);
+
         // Invalidate cache
         await InvalidateClientCacheAsync(client.ClientId);
 
@@ -283,5 +292,24 @@ public class EntityFrameworkClientStore : IClientStore
         {
             await _cache.RemoveAsync($"client:{clientId}");
         }
+    }
+
+    private async Task LogConfigurationChangeAsync(string entityType, string entityId,
+        string changeType, string? oldValues, string? newValues, string? changedBy)
+    {
+        var logEntry = new ConfigurationChangeLogEntity
+        {
+            EntityType = entityType,
+            EntityId = entityId,
+            ChangeType = changeType,
+            OldValues = oldValues,
+            NewValues = newValues,
+            ChangedBy = changedBy,
+            ChangeTime = DateTime.UtcNow,
+            ChangeDescription = $"{changeType} operation on {entityType} '{entityId}'"
+        };
+
+        _context.ConfigurationChangeLogs.Add(logEntry);
+        await _context.SaveChangesAsync();
     }
 }

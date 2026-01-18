@@ -11,66 +11,77 @@ A C# library for building identity servers that support OpenID, OAuth 2.0, and O
 
 ## Getting Started
 
-1. Add the library to your ASP.NET Core project.
-2. Configure the identity server in your `Program.cs` or `Startup.cs`.
+Choose one of the following integration approaches:
 
-### Complete Example
+### Option 1: Integrate with Existing DbContext (Recommended)
 
-Create a new ASP.NET Core Web API project and add the library:
+If you already have an EF Core DbContext, integrate OroIdentityServer entities into it:
 
 ```csharp
+using Microsoft.EntityFrameworkCore;
+using OroIdentityServers.EntityFramework.Extensions;
+
+public class ApplicationDbContext : DbContext, IOroIdentityServerDbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options)
+    {
+    }
+
+    // Your existing entities...
+    public DbSet<MyEntity> MyEntities { get; set; }
+
+    // OroIdentityServer entities (added automatically)
+    public DbSet<ClientEntity> Clients { get; set; }
+    public DbSet<UserEntity> Users { get; set; }
+    public DbSet<PersistedGrantEntity> PersistedGrants { get; set; }
+    // ... other required entities
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // Add OroIdentityServer entities to your model
+        modelBuilder.AddOroIdentityServerEntities();
+    }
+}
+
 // In Program.cs
-using OroIdentityServers;
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString)); // Or your preferred provider
 
-var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddOroIdentityServerDbContext<ApplicationDbContext>();
+builder.Services.AddEntityFrameworkStores();
+builder.Services.AddConfigurationEvents();
+builder.Services.AddAutomaticMigrations<ApplicationDbContext>(); // Optional: auto-apply migrations
+builder.Services.AddTokenCleanupService(); // Optional: auto-cleanup expired tokens
 
-// Configure Identity Server
+// Create migrations in your application
+// dotnet ef migrations add InitialCreate
+// dotnet ef database update
+```
+
+### Option 2: Separate DbContext
+
+For a dedicated identity server database:
+
+```csharp
+builder.Services.AddOroIdentityServerDbContext(options =>
+    options.UseSqlServer(connectionString));
+
+builder.Services.AddEntityFrameworkStores();
+builder.Services.AddConfigurationEvents();
+```
+
+### Option 3: In-Memory Configuration (Development Only)
+
+```csharp
 builder.Services.AddOroIdentityServer(options =>
 {
     options.Issuer = "https://localhost:5001";
-    options.Audience = "api";
-    options.SecretKey = "your-very-long-secret-key-at-least-32-characters";
-    options.Clients = new List<Client>
-    {
-        new Client
-        {
-            ClientId = "web-client",
-            ClientSecret = "web-secret",
-            AllowedGrantTypes = new List<string> { "authorization_code", "refresh_token" },
-            RedirectUris = new List<string> { "https://localhost:3000/callback" },
-            AllowedScopes = new List<string> { "openid", "profile", "api" }
-        },
-        new Client
-        {
-            ClientId = "api-client",
-            ClientSecret = "api-secret",
-            AllowedGrantTypes = new List<string> { "client_credentials" },
-            AllowedScopes = new List<string> { "api" }
-        }
-    };
-    options.Users = new List<User>
-    {
-        new User
-        {
-            Id = "user1",
-            Username = "alice",
-            PasswordHash = "password", // Use secure hashing in production
-            Claims = new List<Claim> { new Claim("name", "Alice"), new Claim("email", "alice@example.com") }
-        }
-    };
+    options.Clients = new List<Client> { /* ... */ };
+    options.Users = new List<User> { /* ... */ };
 });
-
-builder.Services.AddControllers();
-
-var app = builder.Build();
-
-// Use Identity Server middleware
-app.UseOroIdentityServer();
-
-app.UseAuthorization();
-app.MapControllers();
-
-app.Run();
 ```
 
 ## User Management
@@ -115,6 +126,287 @@ public class MyUserStore : IUserStore
 ```
 
 The identity server does not handle user registration or password management; that is the responsibility of the application developer.
+
+## Database-Agnostic Storage with Events
+
+OroIdentityServers supports database-agnostic storage using Entity Framework Core, allowing you to use any database provider (SQL Server, PostgreSQL, MySQL, Oracle, SQLite, etc.). The system includes real-time event notifications for configuration changes.
+
+### Setting Up Database Storage
+
+You have two options for integrating OroIdentityServer with your database:
+
+#### Option 1: Separate DbContext (Recommended for new projects)
+
+1. **Install EF Core Provider**: Add the EF Core provider package for your database:
+   ```bash
+   # For SQL Server
+   dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+   
+   # For PostgreSQL
+   dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
+   
+   # For MySQL
+   dotnet add package Pomelo.EntityFrameworkCore.MySql
+   
+   # For Oracle
+   dotnet add package Oracle.EntityFrameworkCore
+   ```
+
+2. **Configure DbContext**: Set up the database context with your provider:
+   ```csharp
+   builder.Services.AddOroIdentityServerDbContext(options =>
+   {
+       options.UseSqlServer(connectionString);
+       // or options.UseNpgsql(connectionString);
+       // or options.UseMySql(connectionString);
+       // etc.
+   });
+   ```
+
+3. **Add Stores and Events**: Register the EF stores and event system:
+   ```csharp
+   builder.Services.AddEntityFrameworkStores();
+   builder.Services.AddConfigurationEvents(); // In-memory event handling
+   ```
+
+4. **Create Database Migrations**: Generate and apply migrations in your application project:
+   ```bash
+   # Add Microsoft.EntityFrameworkCore.Design to your application project
+   dotnet add package Microsoft.EntityFrameworkCore.Design
+   
+   # Generate initial migration
+   dotnet ef migrations add InitialCreate --project YourApp.csproj --startup-project YourApp.csproj
+   
+   # Apply migrations
+   dotnet ef database update
+   ```
+
+#### Option 2: Integrate with Your Existing DbContext (Recommended for existing projects)
+
+If you already have a DbContext in your application, you can add OroIdentityServer entities directly to it:
+
+1. **Install EF Core Provider**: Same as Option 1.
+
+2. **Modify Your DbContext**: Add OroIdentityServer entities and use the extension method:
+   ```csharp
+   using OroIdentityServers.EntityFramework.Extensions;
+   
+   public class ApplicationDbContext : DbContext
+   {
+       public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+           : base(options)
+       {
+       }
+   
+       // OroIdentityServer entities
+       public DbSet<ClientEntity> Clients => Set<ClientEntity>();
+       public DbSet<UserEntity> Users => Set<UserEntity>();
+       // ... add other entities as needed
+   
+       protected override void OnModelCreating(ModelBuilder modelBuilder)
+       {
+           base.OnModelCreating(modelBuilder);
+           
+           // Add OroIdentityServer entities to your model
+           modelBuilder.AddOroIdentityServerEntities();
+           
+           // Your existing entity configurations...
+       }
+   }
+   ```
+
+3. **Configure Services**: Register your DbContext and OroIdentityServer services:
+   ```csharp
+   builder.Services.AddDbContext<ApplicationDbContext>(options =>
+   {
+       options.UseSqlServer(connectionString);
+   });
+   
+   builder.Services.AddEntityFrameworkStores();
+   builder.Services.AddConfigurationEvents();
+   ```
+
+4. **Create Migrations**: Generate migrations from your application project:
+   ```bash
+   dotnet ef migrations add AddIdentityServerEntities --project YourApp.csproj
+   dotnet ef database update
+   ```
+
+### Complete EF Example (Separate DbContext)
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using OroIdentityServers;
+using OroIdentityServers.EntityFramework.Extensions;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure database (choose your provider)
+builder.Services.AddOroIdentityServerDbContext(options =>
+{
+    options.UseSqlServer("your-connection-string-here");
+});
+
+// Add EF stores and events
+builder.Services.AddEntityFrameworkStores();
+builder.Services.AddConfigurationEvents();
+
+// Configure Identity Server (clients/users managed via database)
+builder.Services.AddOroIdentityServer(options =>
+{
+    options.Issuer = "https://your-domain.com";
+    options.Audience = "api";
+    options.SecretKey = "your-secret-key";
+    
+    // Empty collections - data comes from database
+    options.Clients = new List<Client>();
+    options.Users = new List<User>();
+});
+
+var app = builder.Build();
+
+// Ensure database is created
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<OroIdentityServerDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
+app.UseOroIdentityServer();
+app.Run();
+```
+
+### Complete EF Example (Integrated DbContext)
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using OroIdentityServers;
+using OroIdentityServers.EntityFramework.Extensions;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure your application's DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    options.UseSqlServer("your-connection-string-here");
+});
+
+// Add EF stores and events
+builder.Services.AddEntityFrameworkStores();
+builder.Services.AddConfigurationEvents();
+
+// Configure Identity Server
+builder.Services.AddOroIdentityServer(options =>
+{
+    options.Issuer = "https://your-domain.com";
+    options.Audience = "api";
+    options.SecretKey = "your-secret-key";
+    
+    // Empty collections - data comes from database
+    options.Clients = new List<Client>();
+    options.Users = new List<User>();
+});
+
+var app = builder.Build();
+
+// Ensure database is created
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
+app.UseOroIdentityServer();
+app.Run();
+
+// Your application's DbContext with OroIdentityServer entities
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : base(options)
+    {
+    }
+
+    // OroIdentityServer entities
+    public DbSet<ClientEntity> Clients => Set<ClientEntity>();
+    public DbSet<ClientGrantTypeEntity> ClientGrantTypes => Set<ClientGrantTypeEntity>();
+    public DbSet<ClientRedirectUriEntity> ClientRedirectUris => Set<ClientRedirectUriEntity>();
+    public DbSet<ClientScopeEntity> ClientScopes => Set<ClientScopeEntity>();
+    public DbSet<ClientClaimEntity> ClientClaims => Set<ClientClaimEntity>();
+
+    public DbSet<UserEntity> Users => Set<UserEntity>();
+    public DbSet<UserClaimEntity> UserClaims => Set<UserClaimEntity>();
+
+    public DbSet<PersistedGrantEntity> PersistedGrants => Set<PersistedGrantEntity>();
+
+    // Add other entities as needed...
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        
+        // Add OroIdentityServer entities to your model
+        modelBuilder.AddOroIdentityServerEntities();
+        
+        // Your existing entity configurations...
+    }
+}
+```
+
+// Migrate database
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<OroIdentityServerDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
+app.UseOroIdentityServer();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+```
+
+### Event-Driven Configuration Changes
+
+The system automatically detects and notifies about configuration changes:
+
+- **Client Configuration Changes**: When client settings are modified
+- **User Configuration Changes**: When user data is updated  
+- **Flow Changes**: Specific events for grant type modifications
+- **Real-time Notifications**: Immediate cache invalidation and system updates
+
+### Managing Data via Stores
+
+Access the stores to manage clients, users, and grants programmatically:
+
+```csharp
+// Get services
+var clientStore = scope.ServiceProvider.GetRequiredService<IClientStore>();
+var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+var grantStore = scope.ServiceProvider.GetRequiredService<IPersistedGrantStore>();
+
+// Create a client
+var client = new Client
+{
+    ClientId = "my-client",
+    ClientSecret = "secret",
+    AllowedGrantTypes = new[] { "authorization_code" },
+    RedirectUris = new[] { "https://myapp.com/callback" },
+    AllowedScopes = new[] { "openid", "profile" }
+};
+
+await clientStore.CreateClientAsync(client, "admin");
+
+// Create a user
+var user = new UserEntity
+{
+    Username = "john",
+    PasswordHash = "hashed-password",
+    Email = "john@example.com"
+};
+
+await userStore.CreateUserAsync(user, "admin");
+```
 
 ## Supported Flows
 
@@ -204,6 +496,82 @@ GET `/.well-known/openid-configuration` for OpenID Connect metadata.
 PKCE (RFC 7636) is implemented and required for the authorization code flow, providing protection against authorization code interception attacks in public clients.
 
 ## Examples
+
+## Database Setup and Seeding
+
+### Creating Migrations
+
+When integrating with your DbContext, create and apply migrations:
+
+```bash
+# Add migration
+dotnet ef migrations add InitialCreate
+
+# Apply to database
+dotnet ef database update
+```
+
+### Seeding Initial Data
+
+Create a seeding service to populate initial clients, users, and resources:
+
+```csharp
+public static class DatabaseSeeder
+{
+    public static async Task SeedAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var clientStore = scope.ServiceProvider.GetRequiredService<IClientStore>();
+        var userStore = scope.ServiceProvider.GetRequiredService<IUserStore>();
+
+        // Seed identity resources
+        if (!context.IdentityResources.Any())
+        {
+            context.IdentityResources.AddRange(
+                new IdentityResourceEntity { Name = "openid", DisplayName = "OpenID" },
+                new IdentityResourceEntity { Name = "profile", DisplayName = "Profile" }
+            );
+            await context.SaveChangesAsync();
+        }
+
+        // Seed API scopes
+        if (!context.ApiScopes.Any())
+        {
+            context.ApiScopes.Add(new ApiScopeEntity { Name = "api", DisplayName = "API Access" });
+            await context.SaveChangesAsync();
+        }
+
+        // Seed clients
+        await clientStore.CreateClientAsync(new Client
+        {
+            ClientId = "web-client",
+            ClientSecret = "web-secret",
+            AllowedGrantTypes = new[] { "authorization_code", "refresh_token" },
+            RedirectUris = new[] { "https://localhost:3000/callback" },
+            AllowedScopes = new[] { "openid", "profile", "api" }
+        });
+
+        // Seed users
+        var user = new UserEntity
+        {
+            Username = "admin",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
+            Email = "admin@example.com",
+            Enabled = true
+        };
+        await userStore.CreateUserAsync(user);
+    }
+}
+
+// In Program.cs
+var app = builder.Build();
+
+// Seed database
+await DatabaseSeeder.SeedAsync(app.Services);
+
+app.UseOroIdentityServer();
+```
 
 The `examples/` directory contains complete working applications demonstrating each OAuth flow:
 

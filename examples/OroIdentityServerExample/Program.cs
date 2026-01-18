@@ -3,21 +3,25 @@ using OroIdentityServers.Core;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 
-var builder = WebApplication.CreateBuilder(args);
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorPages();
-builder.Services.AddHttpClient();
-builder.Services.AddCors();
-builder.Services.AddAuthentication("Cookies")
-    .AddCookie("Cookies", options =>
-    {
-        options.LoginPath = "/login";
-    })
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.Authority = "http://localhost:5160";
-        options.Audience = "api";
+        // Add services to the container.
+        builder.Services.AddRazorPages();
+        builder.Services.AddHttpClient();
+        builder.Services.AddCors();
+        builder.Services.AddAuthentication("Cookies")
+            .AddCookie("Cookies", options =>
+            {
+                options.LoginPath = "/login";
+            })
+            .AddJwtBearer("Bearer", options =>
+            {
+                options.Authority = "http://localhost:5160";
+                options.Audience = "api";
         options.RequireHttpsMetadata = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -128,4 +132,6 @@ app.MapGet("/api/test", (HttpContext context) =>
     return $"Hello {user.Identity.Name}! Your claims: {string.Join(", ", claims)}";
 }).RequireAuthorization(policy => policy.AddAuthenticationSchemes("Bearer").RequireAuthenticatedUser());
 
-app.Run();
+        app.Run();
+    }
+}

@@ -3,7 +3,7 @@ using OroIdentityServers.EntityFramework.Entities;
 
 namespace OroIdentityServers.EntityFramework.DbContexts;
 
-public class OroIdentityServerDbContext : DbContext
+public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
 {
     public OroIdentityServerDbContext(DbContextOptions<OroIdentityServerDbContext> options)
         : base(options)
