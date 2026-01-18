@@ -1,0 +1,185 @@
+﻿@page "/"
+@inject AuthenticationService AuthService
+
+<PageTitle>Client Credentials Example</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">OroIdentityServer - Client Credentials Flow</h3>
+                </div>
+                <div class="card-body">
+                    @if (!AuthService.IsAuthenticated)
+                    {
+                        <div class="alert alert-info">
+                            <h5>Client Credentials Flow</h5>
+                            <p>This example demonstrates the OAuth 2.0 Client Credentials flow.</p>
+                            <ul>
+                                <li>No user interaction required</li>
+                                <li>Application authenticates directly with client credentials</li>
+                                <li>Suitable for machine-to-machine communication</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Client Configuration:</strong>
+                            <ul>
+                                <li>Client ID: <code>client-credentials-client</code></li>
+                                <li>Client Secret: <code>client-secret</code></li>
+                                <li>Grant Type: <code>client_credentials</code></li>
+                                <li>Scope: <code>api</code></li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-primary" @onclick="AuthenticateAsync">
+                            @if (_isAuthenticating)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                <span class="ms-2">Authenticating</span>
+                            }
+                            else
+                            {
+                                <span>Authenticate with Client Credentials</span>
+                            }
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success">
+                            <h5>✅ Authentication Successful!</h5>
+                            <p>You are now authenticated using Client Credentials flow.</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <strong>Access Token:</strong>
+                            <div class="input-group">
+                                <input type="text" class="form-control" readonly value="@GetMaskedToken()" />
+                                <button class="btn btn-outline-secondary" @onclick="ToggleTokenVisibility">
+                                    @(ShowFullToken ? "🙈 Hide" : "👁️ Show")
+                                </button>
+                            </div>
+                            @if (ShowFullToken)
+                            {
+                                <small class="text-muted">Full token: @AuthService.AccessToken</small>
+                            }
+                        </div>
+
+                        <hr />
+
+                        <h5>Test Protected API</h5>
+                        <p>Call a protected endpoint using the access token:</p>
+
+                        <button class="btn btn-success me-2" @onclick="CallDiscoveryAsync">
+                            Get Discovery Document
+                        </button>
+
+                        <button class="btn btn-warning" @onclick="Logout">
+                            Logout
+                        </button>
+
+                        @if (!string.IsNullOrEmpty(_apiResponse))
+                        {
+                            <div class="mt-3">
+                                <h6>API Response:</h6>
+                                <pre class="bg-light p-3 rounded"><code>@_apiResponse</code></pre>
+                            </div>
+                        }
+                    }
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3">
+                            <strong>Error:</strong> @_errorMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isAuthenticating;
+    private string? _errorMessage;
+    private string? _apiResponse;
+    private bool ShowFullToken;
+
+    private async Task AuthenticateAsync()
+    {
+        _isAuthenticating = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            Console.WriteLine("Starting authentication...");
+            var success = await AuthService.AuthenticateAsync();
+            Console.WriteLine($"Authentication result: {success}");
+            if (!success)
+            {
+                _errorMessage = "Authentication failed. Please check that the identity server is running.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Authentication error: {ex.Message}");
+            _errorMessage = $"Authentication error: {ex.Message}";
+        }
+        finally
+        {
+            _isAuthenticating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Logout()
+    {
+        AuthService.Logout();
+        _apiResponse = null;
+        _errorMessage = null;
+        ShowFullToken = false;
+        StateHasChanged();
+    }
+
+    private async Task CallApiAsync(string endpoint)
+    {
+        _errorMessage = null;
+        _apiResponse = "Loading...";
+        StateHasChanged();
+
+        try
+        {
+            _apiResponse = await AuthService.CallProtectedApiAsync(endpoint);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"API call error: {ex.Message}";
+            _apiResponse = null;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task CallDiscoveryAsync()
+    {
+        await CallApiAsync("/.well-known/openid-configuration");
+    }
+
+    private string GetMaskedToken()
+    {
+        if (string.IsNullOrEmpty(AuthService.AccessToken))
+            return "";
+
+        if (AuthService.AccessToken.Length <= 20)
+            return AuthService.AccessToken;
+
+        return AuthService.AccessToken.Substring(0, 10) + "..." + AuthService.AccessToken.Substring(AuthService.AccessToken.Length - 10);
+    }
+
+    private void ToggleTokenVisibility()
+    {
+        ShowFullToken = !ShowFullToken;
+    }
+}

@@ -1,0 +1,74 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.Tokens;
+using OroIdentityServers.Core;
+
+namespace OroIdentityServers;
+
+public class UserInfoEndpointMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly IUserStore _userStore;
+    private readonly TokenService _tokenService;
+
+    public UserInfoEndpointMiddleware(RequestDelegate next, IUserStore userStore, TokenService tokenService)
+    {
+        _next = next;
+        _userStore = userStore;
+        _tokenService = tokenService;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        if (context.Request.Path == "/connect/userinfo" && context.Request.Method == "GET")
+        {
+            await HandleUserInfoRequestAsync(context);
+        }
+        else
+        {
+            await _next(context);
+        }
+    }
+
+    private async Task HandleUserInfoRequestAsync(HttpContext context)
+    {
+        var authHeader = context.Request.Headers["Authorization"].ToString();
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+        {
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsync("Unauthorized");
+            return;
+        }
+
+        var token = authHeader.Substring("Bearer ".Length);
+        var handler = new JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(token);
+
+        var userId = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsync("Invalid token");
+            return;
+        }
+
+        var user = await _userStore.FindUserByIdAsync(userId);
+        if (user == null)
+        {
+            context.Response.StatusCode = 404;
+            await context.Response.WriteAsync("User not found");
+            return;
+        }
+
+        var userInfo = new
+        {
+            sub = user.Id,
+            name = user.Username,
+            claims = user.Claims
+        };
+
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(userInfo));
+    }
+}
