@@ -198,16 +198,8 @@ public class TokenEndpointMiddleware
         var username = form["username"].ToString();
         var password = form["password"].ToString();
 
-        var isValid = await _userStore.ValidateCredentialsAsync(username, password);
-        if (!isValid)
-        {
-            context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-            await context.Response.WriteAsync("Invalid credentials");
-            return;
-        }
-
         var user = await _userStore.FindUserByUsernameAsync(username);
-        if (user == null)
+        if (user == null || !user.ValidatePassword(password))
         {
             context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
             await context.Response.WriteAsync("Invalid credentials");

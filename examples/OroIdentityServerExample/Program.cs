@@ -1,6 +1,7 @@
 using OroIdentityServers;
 using OroIdentityServers.Core;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -76,7 +77,7 @@ builder.Services.AddOroIdentityServer(options =>
             Id = "user1",
             Username = "alice",
             PasswordHash = "password",
-            Claims = new List<string> { "name:Alice", "email:alice@example.com" }
+            Claims = new List<Claim> { new Claim("name", "Alice"), new Claim("email", "alice@example.com") }
         }
     };
 });

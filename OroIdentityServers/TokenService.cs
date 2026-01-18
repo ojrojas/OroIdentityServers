@@ -48,7 +48,7 @@ public class TokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public string GenerateIdToken(User user, string clientId, string nonce)
+    public string GenerateIdToken(IUser user, string clientId, string nonce)
     {
         var claims = new List<Claim>
         {
@@ -61,7 +61,7 @@ public class TokenService
             new Claim("nonce", nonce)
         };
 
-        claims.AddRange(user.Claims.Select(c => new Claim(c, c))); // Simplified
+        claims.AddRange(user.Claims);
 
         var token = new JwtSecurityToken(
             issuer: _issuer,

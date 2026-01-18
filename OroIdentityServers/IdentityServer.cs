@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OroIdentityServers.Core;
 using OroIdentityServers.OAuth;
 using OroIdentityServers.OpenId;
+using System.Security.Claims;
 
 namespace OroIdentityServers;
 
@@ -40,7 +41,7 @@ public class IdentityServer
                     Id = "user1",
                     Username = "user1",
                     PasswordHash = "password1", // Simplified
-                    Claims = new List<string> { "name:user1", "email:user1@example.com" }
+                    Claims = new List<Claim> { new Claim("name", "user1"), new Claim("email", "user1@example.com") }
                 }
             };
         });

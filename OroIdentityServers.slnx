@@ -3,6 +3,7 @@
     <Project Path="examples/OroIdentityServerExample/OroIdentityServerExample.csproj" />
   </Folder>
   <Project Path="OroIdentityServers.Core/OroIdentityServers.Core.csproj" />
+  <Project Path="OroIdentityServers.EntityFramework/OroIdentityServers.EntityFramework.csproj" />
   <Project Path="OroIdentityServers.OAuth/OroIdentityServers.OAuth.csproj" />
   <Project Path="OroIdentityServers.OpenId/OroIdentityServers.OpenId.csproj" />
   <Project Path="OroIdentityServers.Tests/OroIdentityServers.Tests.csproj" />

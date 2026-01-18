@@ -55,7 +55,7 @@ builder.Services.AddOroIdentityServer(options =>
             Id = "user1",
             Username = "alice",
             PasswordHash = "password", // Use secure hashing in production
-            Claims = new List<string> { "name:Alice", "email:alice@example.com" }
+            Claims = new List<Claim> { new Claim("name", "Alice"), new Claim("email", "alice@example.com") }
         }
     };
 });
@@ -73,7 +73,50 @@ app.MapControllers();
 app.Run();
 ```
 
-Start the application and test the endpoints:
+## User Management
+
+The library is designed to be user-agnostic. Any class that implements the `IUser` interface can be used as a user in the identity server. The application is responsible for managing user classes, storing user data, and handling password validation.
+
+### Implementing Custom User Classes
+
+To use custom user classes, implement the `IUser` interface:
+
+```csharp
+using System.Security.Claims;
+using OroIdentityServers.Core;
+
+public class MyUser : IUser
+{
+    public string Id { get; set; }
+    public string Username { get; set; }
+    public IEnumerable<Claim> Claims { get; set; }
+    
+    public bool ValidatePassword(string password)
+    {
+        // Implement your password validation logic here
+        // For example, using BCrypt or other hashing
+        return BCrypt.Net.BCrypt.Verify(password, PasswordHash);
+    }
+    
+    // Additional properties
+    public string PasswordHash { get; set; }
+    public string Email { get; set; }
+}
+```
+
+Then, implement `IUserStore` to provide user lookup:
+
+```csharp
+public class MyUserStore : IUserStore
+{
+    // Implement FindUserByUsernameAsync and FindUserByIdAsync
+    // using your data storage (database, etc.)
+}
+```
+
+The identity server does not handle user registration or password management; that is the responsibility of the application developer.
+
+## Supported Flows
 
 - Discovery: `GET https://localhost:5001/.well-known/openid-configuration`
 - Authorize: `GET https://localhost:5001/connect/authorize?client_id=web-client&response_type=code&redirect_uri=https://localhost:3000/callback&scope=openid profile`

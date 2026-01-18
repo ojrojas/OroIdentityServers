@@ -1,18 +1,30 @@
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace OroIdentityServers.Core;
 
-public interface IUserStore
+public interface IUser
 {
-    Task<User?> FindUserByUsernameAsync(string username);
-    Task<User?> FindUserByIdAsync(string id);
-    Task<bool> ValidateCredentialsAsync(string username, string password);
+    string Id { get; }
+    string Username { get; }
+    IEnumerable<Claim> Claims { get; }
+    bool ValidatePassword(string password);
 }
 
-public class User
+public interface IUserStore
+{
+    Task<IUser?> FindUserByUsernameAsync(string username);
+    Task<IUser?> FindUserByIdAsync(string id);
+}
+
+public class User : IUser
 {
     public required string Id { get; set; }
     public required string Username { get; set; }
     public required string PasswordHash { get; set; } // In production, use secure hash
-    public List<string> Claims { get; set; } = new();
+    public List<Claim> Claims { get; set; } = new();
+
+    IEnumerable<Claim> IUser.Claims => Claims;
+
+    public bool ValidatePassword(string password) => PasswordHash == password; // Simplified
 }

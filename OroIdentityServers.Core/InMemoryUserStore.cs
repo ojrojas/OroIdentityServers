@@ -13,19 +13,13 @@ public class InMemoryUserStore : IUserStore
         _users.AddRange(users);
     }
 
-    public Task<User?> FindUserByUsernameAsync(string username)
+    public Task<IUser?> FindUserByUsernameAsync(string username)
     {
-        return Task.FromResult(_users.FirstOrDefault(u => u.Username == username));
+        return Task.FromResult<IUser?>(_users.FirstOrDefault(u => u.Username == username));
     }
 
-    public Task<User?> FindUserByIdAsync(string id)
+    public Task<IUser?> FindUserByIdAsync(string id)
     {
-        return Task.FromResult(_users.FirstOrDefault(u => u.Id == id));
-    }
-
-    public Task<bool> ValidateCredentialsAsync(string username, string password)
-    {
-        var user = _users.FirstOrDefault(u => u.Username == username);
-        return Task.FromResult(user != null && user.PasswordHash == password); // Simplified
+        return Task.FromResult<IUser?>(_users.FirstOrDefault(u => u.Id == id));
     }
 }
