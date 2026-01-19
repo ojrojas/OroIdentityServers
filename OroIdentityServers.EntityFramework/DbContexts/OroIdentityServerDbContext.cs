@@ -1,6 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using OroIdentityServers.EntityFramework.Entities;
-
 namespace OroIdentityServers.EntityFramework.DbContexts;
 
 public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext

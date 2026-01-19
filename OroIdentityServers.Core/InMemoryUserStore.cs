@@ -1,12 +1,8 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace OroIdentityServers.Core;
 
 public class InMemoryUserStore : IUserStore
 {
-    private readonly List<User> _users = new();
+    private readonly List<User> _users = [];
 
     public InMemoryUserStore(IEnumerable<User> users)
     {

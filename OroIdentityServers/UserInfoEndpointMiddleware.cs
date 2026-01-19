@@ -1,10 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
-using Microsoft.IdentityModel.Tokens;
-using OroIdentityServers.Core;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace OroIdentityServers;
 
 public class UserInfoEndpointMiddleware

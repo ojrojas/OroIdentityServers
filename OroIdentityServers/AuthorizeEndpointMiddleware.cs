@@ -1,7 +1,3 @@
-using Microsoft.AspNetCore.Http;
-using OroIdentityServers.Core;
-using Microsoft.Extensions.DependencyInjection;
-
 namespace OroIdentityServers;
 
 public class AuthorizeEndpointMiddleware

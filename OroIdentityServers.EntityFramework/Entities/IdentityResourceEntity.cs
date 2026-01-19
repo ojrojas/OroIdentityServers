@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace OroIdentityServers.EntityFramework.Entities;
 
 [Table("IdentityResources")]
@@ -33,7 +30,7 @@ public class IdentityResourceEntity
     public DateTime? LastModified { get; set; }
 
     // Navigation properties
-    public virtual ICollection<IdentityResourceClaimEntity> UserClaims { get; set; } = new List<IdentityResourceClaimEntity>();
+    public virtual ICollection<IdentityResourceClaimEntity> UserClaims { get; set; } = [];
 
     // Multi-tenancy
     public virtual TenantEntity? Tenant { get; set; }

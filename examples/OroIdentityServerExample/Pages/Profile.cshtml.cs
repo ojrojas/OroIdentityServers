@@ -10,7 +10,7 @@ public class ProfileModel : PageModel
 {
     public string? UserId { get; set; }
     public string? Username { get; set; }
-    public Dictionary<string, string> Claims { get; set; } = new();
+    public Dictionary<string, string> Claims { get; set; } = [];
 
     public void OnGet()
     {
