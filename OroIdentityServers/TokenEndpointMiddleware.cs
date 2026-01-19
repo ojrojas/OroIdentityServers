@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using OroIdentityServers.Core;
 using OroIdentityServers.OAuth;
 using Microsoft.Extensions.DependencyInjection;
+using OroIdentityServers.EntityFramework.Events;
 
 namespace OroIdentityServers;
 
@@ -75,6 +76,7 @@ public class TokenEndpointMiddleware
     {
         using var scope = serviceProvider.CreateScope();
         var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
+        var eventPublisher = scope.ServiceProvider.GetService<IEventPublisher>();
         var token = tokenService.GenerateAccessToken(client, "client", client.AllowedScopes);
         var response = new
         {
@@ -84,6 +86,21 @@ public class TokenEndpointMiddleware
         };
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+
+        // Publish access token issued event
+        if (eventPublisher != null)
+        {
+            var tokenEvent = new AccessTokenIssuedEvent
+            {
+                ClientId = client.ClientId,
+                UserId = "client",
+                Scopes = client.AllowedScopes.ToList(),
+                TokenId = token,
+                GrantType = "client_credentials",
+                Timestamp = DateTime.UtcNow
+            };
+            await eventPublisher.PublishToExternalServicesAsync(tokenEvent);
+        }
     }
 
     private async Task HandleAuthorizationCodeGrantAsync(HttpContext context, Client client, IFormCollection form, IServiceProvider serviceProvider)
@@ -160,6 +177,34 @@ public class TokenEndpointMiddleware
         };
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+
+        // Publish token events
+        var eventPublisher = scope.ServiceProvider.GetService<IEventPublisher>();
+        if (eventPublisher != null)
+        {
+            // Access token issued event
+            var accessTokenEvent = new AccessTokenIssuedEvent
+            {
+                ClientId = client.ClientId,
+                UserId = user.Id,
+                Scopes = grant.Scopes.ToList(),
+                TokenId = accessToken,
+                GrantType = "authorization_code",
+                Timestamp = DateTime.UtcNow
+            };
+            await eventPublisher.PublishToExternalServicesAsync(accessTokenEvent);
+
+            // Refresh token issued event
+            var refreshTokenEvent = new RefreshTokenIssuedEvent
+            {
+                ClientId = client.ClientId,
+                UserId = user.Id,
+                Scopes = grant.Scopes.ToList(),
+                TokenId = refreshToken,
+                Timestamp = DateTime.UtcNow
+            };
+            await eventPublisher.PublishToExternalServicesAsync(refreshTokenEvent);
+        }
     }
 
     private async Task HandleRefreshTokenGrantAsync(HttpContext context, Client client, IFormCollection form, IServiceProvider serviceProvider)
@@ -201,6 +246,46 @@ public class TokenEndpointMiddleware
         };
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+
+        // Publish token events
+        var eventPublisher = scope.ServiceProvider.GetService<IEventPublisher>();
+        if (eventPublisher != null)
+        {
+            // Access token issued event
+            var accessTokenEvent = new AccessTokenIssuedEvent
+            {
+                ClientId = client.ClientId,
+                UserId = user.Id,
+                Scopes = grant.Scopes.ToList(),
+                TokenId = accessToken,
+                GrantType = "refresh_token",
+                Timestamp = DateTime.UtcNow
+            };
+            await eventPublisher.PublishToExternalServicesAsync(accessTokenEvent);
+
+            // Refresh token issued event
+            var refreshTokenEvent = new RefreshTokenIssuedEvent
+            {
+                ClientId = client.ClientId,
+                UserId = user.Id,
+                Scopes = grant.Scopes.ToList(),
+                TokenId = newRefreshToken,
+                Timestamp = DateTime.UtcNow
+            };
+            await eventPublisher.PublishToExternalServicesAsync(refreshTokenEvent);
+
+            // Token revoked event for old refresh token
+            var tokenRevokedEvent = new TokenRevokedEvent
+            {
+                ClientId = client.ClientId,
+                UserId = user.Id,
+                TokenId = refreshToken,
+                TokenType = "refresh_token",
+                Reason = "refresh_token_used",
+                Timestamp = DateTime.UtcNow
+            };
+            await eventPublisher.PublishToExternalServicesAsync(tokenRevokedEvent);
+        }
     }
 
     private async Task HandlePasswordGrantAsync(HttpContext context, Client client, IFormCollection form, IServiceProvider serviceProvider)

@@ -34,4 +34,11 @@ public class PersistedGrantEntity
 
     [MaxLength(200)]
     public string? Description { get; set; }
+
+    [Required]
+    [MaxLength(100)]
+    public required string TenantId { get; set; }
+
+    // Navigation property
+    public virtual TenantEntity Tenant { get; set; } = null!;
 }

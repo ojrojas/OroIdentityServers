@@ -5,6 +5,7 @@ using OroIdentityServers.Core;
 using OroIdentityServers.EntityFramework.DbContexts;
 using OroIdentityServers.EntityFramework.Entities;
 using OroIdentityServers.EntityFramework.Events;
+using OroIdentityServers.EntityFramework.MultiTenancy;
 
 namespace OroIdentityServers.EntityFramework.Stores;
 
@@ -13,16 +14,19 @@ public class EntityFrameworkUserStore : IUserStore
     private readonly IOroIdentityServerDbContext _context;
     private readonly IDistributedCache? _cache;
     private readonly IConfigurationChangeNotifier? _eventNotifier;
+    private readonly ITenantResolver? _tenantResolver;
     private readonly ConcurrentDictionary<string, IUser> _userCache = new();
 
     public EntityFrameworkUserStore(
         IOroIdentityServerDbContext context,
         IDistributedCache? cache = null,
-        IConfigurationChangeNotifier? eventNotifier = null)
+        IConfigurationChangeNotifier? eventNotifier = null,
+        ITenantResolver? tenantResolver = null)
     {
         _context = context;
         _cache = cache;
         _eventNotifier = eventNotifier;
+        _tenantResolver = tenantResolver;
     }
 
     public async Task<IUser?> FindUserByUsernameAsync(string username)
@@ -50,9 +54,11 @@ public class EntityFrameworkUserStore : IUserStore
         }
 
         // Load from database
+        var tenantId = await GetCurrentTenantIdAsync();
         var userEntity = await _context.Users
             .Include(u => u.Claims)
-            .FirstOrDefaultAsync(u => u.Username == username && u.Enabled);
+            .FirstOrDefaultAsync(u => u.Username == username && u.Enabled &&
+                                    (tenantId == null || u.TenantId == tenantId));
 
         if (userEntity == null)
         {
@@ -79,9 +85,11 @@ public class EntityFrameworkUserStore : IUserStore
     public async Task<IUser?> FindUserByIdAsync(string id)
     {
         // Load from database
+        var tenantId = await GetCurrentTenantIdAsync();
         var userEntity = await _context.Users
             .Include(u => u.Claims)
-            .FirstOrDefaultAsync(u => u.Id.ToString() == id && u.Enabled);
+            .FirstOrDefaultAsync(u => u.Id.ToString() == id && u.Enabled &&
+                                    (tenantId == null || u.TenantId == tenantId));
 
         return userEntity != null ? MapToIUser(userEntity) : null;
     }
@@ -100,6 +108,8 @@ public class EntityFrameworkUserStore : IUserStore
     // Methods for managing users with event notifications
     public async Task CreateUserAsync(UserEntity user, string? changedBy = null)
     {
+        var tenantId = await GetCurrentTenantIdAsync() ?? throw new InvalidOperationException("Tenant context is required");
+        user.TenantId = tenantId;
         user.Created = DateTime.UtcNow;
         user.Enabled = true;
 
@@ -126,9 +136,10 @@ public class EntityFrameworkUserStore : IUserStore
 
     public async Task UpdateUserAsync(UserEntity user, string? changedBy = null)
     {
+        var tenantId = await GetCurrentTenantIdAsync() ?? throw new InvalidOperationException("Tenant context is required");
         var existingUser = await _context.Users
             .Include(u => u.Claims)
-            .FirstOrDefaultAsync(u => u.Id == user.Id);
+            .FirstOrDefaultAsync(u => u.Id == user.Id && u.TenantId == tenantId);
 
         if (existingUser == null)
         {
@@ -178,7 +189,9 @@ public class EntityFrameworkUserStore : IUserStore
 
     public async Task DeleteUserAsync(int userId, string? changedBy = null)
     {
-        var user = await _context.Users.FindAsync(userId);
+        var tenantId = await GetCurrentTenantIdAsync() ?? throw new InvalidOperationException("Tenant context is required");
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId);
         if (user != null)
         {
             var oldUser = MapToIUser(user);
@@ -212,5 +225,10 @@ public class EntityFrameworkUserStore : IUserStore
         {
             await _cache.RemoveAsync($"user:{username}");
         }
+    }
+
+    private async Task<string?> GetCurrentTenantIdAsync()
+    {
+        return _tenantResolver != null ? await _tenantResolver.GetCurrentTenantIdAsync() : null;
     }
 }

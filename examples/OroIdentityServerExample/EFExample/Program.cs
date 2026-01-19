@@ -59,6 +59,7 @@ async Task SeedInitialDataAsync(OroIdentityServerDbContext dbContext)
     {
         var client = new ClientEntity
         {
+            TenantId = "default",
             ClientId = "web-client",
             ClientSecret = "web-secret",
             ClientName = "Web Application",
@@ -87,6 +88,7 @@ async Task SeedInitialDataAsync(OroIdentityServerDbContext dbContext)
     {
         var user = new UserEntity
         {
+            TenantId = "default",
             Username = "alice",
             PasswordHash = "password", // In production, use proper hashing
             Email = "alice@example.com",

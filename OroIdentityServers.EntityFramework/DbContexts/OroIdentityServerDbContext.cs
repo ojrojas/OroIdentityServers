@@ -37,6 +37,12 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
     // Configuration Change Log
     public DbSet<ConfigurationChangeLogEntity> ConfigurationChangeLogs { get; set; } = null!;
 
+    // Events
+    public DbSet<EventEntity> Events { get; set; } = null!;
+
+    // Tenants
+    public DbSet<TenantEntity> Tenants { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -47,6 +53,8 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
         ConfigurePersistedGrants(modelBuilder);
         ConfigureResources(modelBuilder);
         ConfigureConfigurationChangeLogs(modelBuilder);
+        ConfigureEvents(modelBuilder);
+        ConfigureTenants(modelBuilder);
     }
 
     private void ConfigureClients(ModelBuilder modelBuilder)
@@ -55,6 +63,7 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
         modelBuilder.Entity<ClientEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.ClientId).IsRequired().HasMaxLength(200);
             entity.Property(e => e.ClientSecret).IsRequired().HasMaxLength(200);
             entity.Property(e => e.ClientName).HasMaxLength(200);
@@ -115,6 +124,7 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
         modelBuilder.Entity<UserEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Username).IsRequired().HasMaxLength(200);
             entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Email).HasMaxLength(200);
@@ -160,6 +170,7 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
         modelBuilder.Entity<IdentityResourceEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.DisplayName).HasMaxLength(200);
             entity.Property(e => e.Description).HasMaxLength(1000);
@@ -183,6 +194,7 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
         modelBuilder.Entity<ApiResourceEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.DisplayName).HasMaxLength(200);
             entity.Property(e => e.Description).HasMaxLength(1000);
@@ -266,5 +278,83 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
             // Index
             entity.HasIndex(e => e.ChangeTime);
         });
+    }
+
+    private void ConfigureEvents(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<EventEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AggregateId).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.AggregateType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.EventType).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Version).IsRequired();
+            entity.Property(e => e.Timestamp).IsRequired();
+            entity.Property(e => e.CorrelationId).HasMaxLength(200);
+            entity.Property(e => e.CausationId).HasMaxLength(200);
+            entity.Property(e => e.UserId).HasMaxLength(200);
+            entity.Property(e => e.Data).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Metadata).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.IsProcessed).HasDefaultValue(false);
+
+            // Indexes for performance
+            entity.HasIndex(e => new { e.AggregateId, e.AggregateType });
+            entity.HasIndex(e => e.EventType);
+            entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => e.IsProcessed);
+        });
+    }
+
+    private void ConfigureTenants(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<TenantEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Domain).HasMaxLength(200);
+            entity.Property(e => e.ConnectionString).HasMaxLength(2000);
+            entity.Property(e => e.Configuration).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Enabled).HasDefaultValue(true);
+            entity.Property(e => e.IsIsolated).HasDefaultValue(false);
+            entity.Property(e => e.Created).HasDefaultValueSql("GETUTCDATE()");
+
+            // Indexes
+            entity.HasIndex(e => e.TenantId).IsUnique();
+            entity.HasIndex(e => e.Domain).IsUnique();
+            entity.HasIndex(e => e.Enabled);
+        });
+
+        // Configure tenant relationships
+        modelBuilder.Entity<ClientEntity>()
+            .HasOne(c => c.Tenant)
+            .WithMany(t => t.Clients)
+            .HasForeignKey(c => c.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<UserEntity>()
+            .HasOne(u => u.Tenant)
+            .WithMany(t => t.Users)
+            .HasForeignKey(u => u.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ApiResourceEntity>()
+            .HasOne(ar => ar.Tenant)
+            .WithMany(t => t.ApiResources)
+            .HasForeignKey(ar => ar.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IdentityResourceEntity>()
+            .HasOne(ir => ir.Tenant)
+            .WithMany(t => t.IdentityResources)
+            .HasForeignKey(ir => ir.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PersistedGrantEntity>()
+            .HasOne(pg => pg.Tenant)
+            .WithMany(t => t.PersistedGrants)
+            .HasForeignKey(pg => pg.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

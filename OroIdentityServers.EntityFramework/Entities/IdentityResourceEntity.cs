@@ -11,6 +11,10 @@ public class IdentityResourceEntity
     public int Id { get; set; }
 
     [Required]
+    [MaxLength(100)]
+    public required string TenantId { get; set; }
+
+    [Required]
     [MaxLength(200)]
     public required string Name { get; set; }
 
@@ -30,4 +34,7 @@ public class IdentityResourceEntity
 
     // Navigation properties
     public virtual ICollection<IdentityResourceClaimEntity> UserClaims { get; set; } = new List<IdentityResourceClaimEntity>();
+
+    // Multi-tenancy
+    public virtual TenantEntity? Tenant { get; set; }
 }

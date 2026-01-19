@@ -11,6 +11,10 @@ public class ClientEntity
     public int Id { get; set; }
 
     [Required]
+    [MaxLength(100)]
+    public required string TenantId { get; set; }
+
+    [Required]
     [MaxLength(200)]
     public required string ClientId { get; set; }
 
@@ -35,4 +39,7 @@ public class ClientEntity
     public virtual ICollection<ClientRedirectUriEntity> RedirectUris { get; set; } = new List<ClientRedirectUriEntity>();
     public virtual ICollection<ClientScopeEntity> AllowedScopes { get; set; } = new List<ClientScopeEntity>();
     public virtual ICollection<ClientClaimEntity> Claims { get; set; } = new List<ClientClaimEntity>();
+
+    // Multi-tenancy
+    public virtual TenantEntity? Tenant { get; set; }
 }

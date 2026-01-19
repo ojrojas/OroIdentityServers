@@ -8,7 +8,7 @@ A comprehensive, database-agnostic identity server library for ASP.NET Core that
 - **OpenID Connect 1.0**: Full OIDC compliance with discovery, userinfo, and token endpoints
 - **Database Agnostic**: Works with SQL Server, PostgreSQL, MySQL, SQLite, and more via EF Core
 - **Entity Framework Integration**: Automatic DbContext extension pattern following OpenIddict conventions
-- **Security Features**: BCrypt password hashing, JWT token validation, CORS support
+- **Security Features**: BCrypt password hashing, JWT token validation, CORS support, **encrypted client secrets**
 - **Extensible Architecture**: Pluggable stores, middleware pipeline, and event system
 - **Production Ready**: Automatic migrations, token cleanup, audit logging, and configuration change tracking
 
@@ -32,6 +32,145 @@ builder.Services.AddOroIdentityServerDbContext<ApplicationDbContext>(options =>
 });
 
 builder.Services.AddOroIdentityServer<ApplicationDbContext>();
+```
+
+### Encrypted Client Secrets
+
+OroIdentityServers supports AES encryption for client secrets to enhance security. Client secrets are automatically encrypted when stored in the database and decrypted when retrieved.
+
+```csharp
+// Add encryption service with custom key (recommended for production)
+builder.Services.AddEncryptionService("your-secure-encryption-key-here");
+
+// Or use default key (development only)
+builder.Services.AddEncryptionService();
+```
+
+**Security Benefits:**
+- Client secrets are encrypted at rest in the database
+- Backward compatibility with existing BCrypt-hashed secrets
+- AES-256 encryption with PBKDF2 key derivation
+- Automatic decryption during client validation
+
+**Migration Note:** Existing client secrets will continue to work. New secrets will be encrypted automatically.
+
+**Complete Example:**
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure database
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+// Configure OroIdentityServer
+builder.Services.AddOroIdentityServerDbContext<ApplicationDbContext>();
+builder.Services.AddEntityFrameworkStores();
+builder.Services.AddConfigurationEvents();
+
+// Add encryption service (recommended)
+builder.Services.AddEncryptionService("your-production-encryption-key");
+
+builder.Services.AddOroIdentityServer<ApplicationDbContext>();
+
+var app = builder.Build();
+
+// Seed initial data
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = new DatabaseSeeder();
+    await seeder.SeedAsync(scope.ServiceProvider);
+}
+
+app.UseOroIdentityServer();
+app.Run();
+```
+
+## Multi-Tenancy Support
+
+OroIdentityServers provides comprehensive multi-tenancy support, enabling you to serve multiple tenants from a single deployment with complete data isolation.
+
+### Features
+
+- **Tenant Resolution**: Multiple strategies for tenant identification (header, domain, query parameter, composite)
+- **Data Isolation**: All entities are scoped to specific tenants with automatic filtering
+- **Shared Database**: Single database with discriminator columns for cost-effective multi-tenancy
+- **Tenant Management**: Full CRUD operations for tenant configuration
+- **Domain-based Routing**: Support for tenant-specific domains and subdomains
+
+### Configuration
+
+```csharp
+// Configure multi-tenancy with header-based resolution
+builder.Services.AddMultiTenancy(options =>
+{
+    options.ResolutionStrategy = TenantResolutionStrategy.Header;
+    options.HeaderName = "X-Tenant-Id";
+});
+
+// Or domain-based resolution
+builder.Services.AddMultiTenancy(options =>
+{
+    options.ResolutionStrategy = TenantResolutionStrategy.Domain;
+    options.DomainSuffix = ".myapp.com";
+});
+
+// Or query parameter resolution
+builder.Services.AddMultiTenancy(options =>
+{
+    options.ResolutionStrategy = TenantResolutionStrategy.QueryParameter;
+    options.QueryParameterName = "tenantId";
+});
+
+// Add tenant resolution middleware
+app.UseTenantResolution();
+```
+
+### Tenant Resolution Strategies
+
+1. **Header-based**: `X-Tenant-Id: tenant1`
+2. **Domain-based**: `tenant1.myapp.com`
+3. **Query Parameter**: `?tenantId=tenant1`
+4. **Composite**: Fallback between multiple strategies
+
+### Database Schema
+
+All entities include a `TenantId` foreign key to the `Tenants` table:
+
+```sql
+-- Tenants table
+CREATE TABLE Tenants (
+    Id INT PRIMARY KEY,
+    TenantId NVARCHAR(100) UNIQUE NOT NULL,
+    Name NVARCHAR(200) NOT NULL,
+    Domain NVARCHAR(200) NULL,
+    ConnectionString NVARCHAR(2000) NULL,
+    Enabled BIT DEFAULT 1,
+    IsIsolated BIT DEFAULT 0
+);
+
+-- All other tables have TenantId FK
+ALTER TABLE Clients ADD TenantId NVARCHAR(100) NOT NULL;
+ALTER TABLE Clients ADD FOREIGN KEY (TenantId) REFERENCES Tenants(TenantId);
+```
+
+### Usage Example
+
+```csharp
+// Tenant context is automatically resolved from HTTP request
+// All operations are scoped to the current tenant
+
+// Create tenant-specific client
+var client = new Client
+{
+    ClientId = "tenant-client",
+    ClientName = "Tenant Client"
+};
+
+await clientStore.CreateClientAsync(client);
+
+// Retrieve tenant-specific users only
+var users = await userStore.GetAllUsersAsync(); // Returns only current tenant's users
 ```
 
 ### 3. Configure Middleware
@@ -295,6 +434,7 @@ The test suite includes:
 - Monitor token usage and implement rate limiting
 - Use strong password policies
 - Implement account lockout mechanisms
+- **Encrypt client secrets** using the built-in AES encryption service
 
 ## Performance
 
@@ -303,6 +443,107 @@ The test suite includes:
 - EF Core query optimization with compiled queries
 - In-memory caching for frequently accessed data
 - Async/await throughout for non-blocking I/O
+
+## Event-Driven Architecture
+
+OroIdentityServers includes a comprehensive event-driven architecture for microservices integration, enabling real-time notifications and cross-service communication.
+
+### Features
+
+- **Event Bus**: In-memory event bus for local event distribution
+- **Message Brokers**: Support for RabbitMQ and Azure Service Bus
+- **Event Sourcing**: Persistent event storage with Entity Framework
+- **Domain Events**: Rich domain events for all identity operations
+- **Webhook Integration**: HTTP webhook notifications for external services
+- **Event Store**: Query historical events for audit and replay
+
+### Domain Events
+
+The following domain events are automatically published:
+
+- **Client Events**: `ClientCreatedEvent`, `ClientUpdatedEvent`, `ClientDeletedEvent`
+- **User Events**: `UserCreatedEvent`, `UserUpdatedEvent`, `UserDeletedEvent`
+- **Token Events**: `AccessTokenIssuedEvent`, `RefreshTokenIssuedEvent`, `TokenRevokedEvent`
+- **Authentication Events**: `UserLoginEvent`, `UserLogoutEvent`
+- **Authorization Events**: `AuthorizationGrantedEvent`, `AuthorizationDeniedEvent`
+
+### Configuration
+
+```csharp
+// Add in-memory event bus (default)
+builder.Services.AddInMemoryEventBus();
+
+// Add RabbitMQ message broker
+builder.Services.AddRabbitMqMessageBroker(builder.Configuration);
+
+// Add Azure Service Bus message broker
+builder.Services.AddAzureServiceBusMessageBroker(builder.Configuration);
+
+// Add event store for event sourcing
+builder.Services.AddEventStore();
+
+// Add event publisher with webhooks
+builder.Services.AddEventPublisher(builder.Configuration);
+
+// Complete event-driven setup
+builder.Services.AddEventDrivenArchitecture(builder.Configuration);
+```
+
+### Webhook Configuration
+
+Configure webhook URLs in `appsettings.json`:
+
+```json
+{
+  "EventPublisher": {
+    "WebhookUrls": [
+      "https://api.example.com/webhooks/identity-events",
+      "https://service.example.com/events"
+    ]
+  }
+}
+```
+
+### Message Broker Configuration
+
+#### RabbitMQ
+```json
+{
+  "RabbitMq": {
+    "HostName": "localhost",
+    "Port": 5672,
+    "UserName": "guest",
+    "Password": "guest",
+    "VirtualHost": "/"
+  }
+}
+```
+
+#### Azure Service Bus
+```json
+{
+  "AzureServiceBus": {
+    "ConnectionString": "your-connection-string",
+    "TopicName": "identity-events"
+  }
+}
+```
+
+### Event Store Queries
+
+```csharp
+// Get events for a specific aggregate
+var events = await eventStore.GetEventsAsync(clientId);
+
+// Get events by type
+var tokenEvents = await eventStore.GetEventsByTypeAsync("AccessTokenIssuedEvent");
+
+// Replay events for event sourcing
+foreach (var @event in events)
+{
+    await eventHandler.HandleAsync(@event);
+}
+```
 
 ## Contributing
 

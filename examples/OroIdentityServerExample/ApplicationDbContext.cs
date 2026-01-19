@@ -38,6 +38,10 @@ public class ApplicationDbContext : DbContext, IOroIdentityServerDbContext
 
     public DbSet<ConfigurationChangeLogEntity> ConfigurationChangeLogs { get; set; } = null!;
 
+    public DbSet<EventEntity> Events { get; set; } = null!;
+
+    public DbSet<TenantEntity> Tenants { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

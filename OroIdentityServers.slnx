@@ -1,6 +1,17 @@
 <Solution>
   <Folder Name="/examples/">
+    <Project Path="examples/OroIdentityServerClientCredentialsExample/OroIdentityServerClientCredentialsExample.csproj" />
     <Project Path="examples/OroIdentityServerExample/OroIdentityServerExample.csproj" />
+    <Project Path="examples/OroIdentityServerMultiTenancyExample/OroIdentityServerMultiTenancyExample.csproj" />
+    <Project Path="examples/OroIdentityServerPasswordExample/OroIdentityServerPasswordExample.csproj" />
+    <Project Path="examples/OroIdentityServerPKCEExample/OroIdentityServerPKCEExample.csproj" />
+  </Folder>
+  <Folder Name="/examples/OroIdentityServerExample/" />
+  <Folder Name="/examples/OroIdentityServerExample/EFExample/">
+    <Project Path="examples/OroIdentityServerExample/EFExample/OroIdentityServerEFExample.csproj" />
+  </Folder>
+  <Folder Name="/examples/OroIdentityServerExample/IntegratedDbContext/">
+    <Project Path="examples/OroIdentityServerExample/IntegratedDbContext/OroIdentityServerIntegratedExample.csproj" />
   </Folder>
   <Project Path="OroIdentityServers.Core/OroIdentityServers.Core.csproj" />
   <Project Path="OroIdentityServers.EntityFramework/OroIdentityServers.EntityFramework.csproj" />

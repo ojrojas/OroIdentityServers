@@ -4,6 +4,7 @@
     <ProjectReference Include="..\OroIdentityServers.Core\OroIdentityServers.Core.csproj" />
     <ProjectReference Include="..\OroIdentityServers.OAuth\OroIdentityServers.OAuth.csproj" />
     <ProjectReference Include="..\OroIdentityServers.OpenId\OroIdentityServers.OpenId.csproj" />
+    <ProjectReference Include="..\OroIdentityServers.EntityFramework\OroIdentityServers.EntityFramework.csproj" />
   </ItemGroup>
 
   <ItemGroup>

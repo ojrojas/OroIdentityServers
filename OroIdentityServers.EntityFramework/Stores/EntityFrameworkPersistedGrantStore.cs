@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using OroIdentityServers.Core;
 using OroIdentityServers.EntityFramework.DbContexts;
 using OroIdentityServers.EntityFramework.Entities;
+using OroIdentityServers.EntityFramework.MultiTenancy;
 
 namespace OroIdentityServers.EntityFramework.Stores;
 
@@ -10,19 +11,24 @@ public class EntityFrameworkPersistedGrantStore : IPersistedGrantStore
 {
     private readonly IOroIdentityServerDbContext _context;
     private readonly IDistributedCache? _cache;
+    private readonly ITenantResolver? _tenantResolver;
 
     public EntityFrameworkPersistedGrantStore(
         IOroIdentityServerDbContext context,
-        IDistributedCache? cache = null)
+        IDistributedCache? cache = null,
+        ITenantResolver? tenantResolver = null)
     {
         _context = context;
         _cache = cache;
+        _tenantResolver = tenantResolver;
     }
 
     public async Task<AuthorizationCodeGrant?> GetAuthorizationCodeAsync(string code)
     {
+        var tenantId = await GetCurrentTenantIdAsync();
         var grant = await _context.PersistedGrants
-            .FirstOrDefaultAsync(g => g.Key == code && g.Type == "authorization_code");
+            .FirstOrDefaultAsync(g => g.Key == code && g.Type == "authorization_code" &&
+                                    (tenantId == null || g.TenantId == tenantId));
 
         if (grant == null || grant.Expiration < DateTime.UtcNow)
         {
@@ -51,10 +57,12 @@ public class EntityFrameworkPersistedGrantStore : IPersistedGrantStore
 
     public async Task StoreAuthorizationCodeAsync(string code, string clientId, string userId, string redirectUri, IEnumerable<string> scopes, string? codeChallenge = null, string? codeChallengeMethod = null)
     {
+        var tenantId = await GetCurrentTenantIdAsync() ?? throw new InvalidOperationException("Tenant context is required");
         var data = $"{redirectUri}|{string.Join(" ", scopes)}|{codeChallenge}|{codeChallengeMethod}";
 
         var grant = new PersistedGrantEntity
         {
+            TenantId = tenantId,
             Key = code,
             Type = "authorization_code",
             SubjectId = userId,
@@ -70,8 +78,10 @@ public class EntityFrameworkPersistedGrantStore : IPersistedGrantStore
 
     public async Task RemoveAuthorizationCodeAsync(string code)
     {
+        var tenantId = await GetCurrentTenantIdAsync();
         var grant = await _context.PersistedGrants
-            .FirstOrDefaultAsync(g => g.Key == code && g.Type == "authorization_code");
+            .FirstOrDefaultAsync(g => g.Key == code && g.Type == "authorization_code" &&
+                                    (tenantId == null || g.TenantId == tenantId));
 
         if (grant != null)
         {
@@ -82,8 +92,10 @@ public class EntityFrameworkPersistedGrantStore : IPersistedGrantStore
 
     public async Task<RefreshTokenGrant?> GetRefreshTokenAsync(string refreshToken)
     {
+        var tenantId = await GetCurrentTenantIdAsync();
         var grant = await _context.PersistedGrants
-            .FirstOrDefaultAsync(g => g.Key == refreshToken && g.Type == "refresh_token");
+            .FirstOrDefaultAsync(g => g.Key == refreshToken && g.Type == "refresh_token" &&
+                                    (tenantId == null || g.TenantId == tenantId));
 
         if (grant == null || grant.Expiration < DateTime.UtcNow)
         {
@@ -102,8 +114,10 @@ public class EntityFrameworkPersistedGrantStore : IPersistedGrantStore
 
     public async Task StoreRefreshTokenAsync(string refreshToken, string clientId, string userId, IEnumerable<string> scopes)
     {
+        var tenantId = await GetCurrentTenantIdAsync() ?? throw new InvalidOperationException("Tenant context is required");
         var grant = new PersistedGrantEntity
         {
+            TenantId = tenantId,
             Key = refreshToken,
             Type = "refresh_token",
             SubjectId = userId,
@@ -119,13 +133,20 @@ public class EntityFrameworkPersistedGrantStore : IPersistedGrantStore
 
     public async Task RemoveRefreshTokenAsync(string refreshToken)
     {
+        var tenantId = await GetCurrentTenantIdAsync();
         var grant = await _context.PersistedGrants
-            .FirstOrDefaultAsync(g => g.Key == refreshToken && g.Type == "refresh_token");
+            .FirstOrDefaultAsync(g => g.Key == refreshToken && g.Type == "refresh_token" &&
+                                    (tenantId == null || g.TenantId == tenantId));
 
         if (grant != null)
         {
             _context.PersistedGrants.Remove(grant);
             await _context.SaveChangesAsync();
         }
+    }
+
+    private async Task<string?> GetCurrentTenantIdAsync()
+    {
+        return _tenantResolver != null ? await _tenantResolver.GetCurrentTenantIdAsync() : null;
     }
 }
