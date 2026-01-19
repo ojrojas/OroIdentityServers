@@ -112,6 +112,36 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<TokenCleanupService>();
         return services;
     }
+
+    /// <summary>
+    /// Adds encryption service for client secrets and sensitive data.
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="encryptionKey">The encryption key (should be stored securely)</param>
+    /// <returns>The service collection</returns>
+    public static IServiceCollection AddEncryptionService(
+        this IServiceCollection services,
+        string encryptionKey)
+    {
+        services.AddSingleton<IEncryptionService>(new AesEncryptionService(encryptionKey));
+        return services;
+    }
+
+    /// <summary>
+    /// Adds encryption service for client secrets and sensitive data.
+    /// Uses a default encryption key (not recommended for production).
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <returns>The service collection</returns>
+    public static IServiceCollection AddEncryptionService(
+        this IServiceCollection services)
+    {
+        // WARNING: This uses a default key for development only
+        // In production, use AddEncryptionService(services, "your-secure-key")
+        var defaultKey = "OroIdentityServerDefaultEncryptionKey2024!@#";
+        services.AddSingleton<IEncryptionService>(new AesEncryptionService(defaultKey));
+        return services;
+    }
 }
 
 public static class ModelBuilderExtensions

@@ -11,6 +11,10 @@ public class UserEntity
     public int Id { get; set; }
 
     [Required]
+    [MaxLength(100)]
+    public required string TenantId { get; set; }
+
+    [Required]
     [MaxLength(200)]
     public required string Username { get; set; }
 
@@ -33,4 +37,7 @@ public class UserEntity
 
     // Navigation properties
     public virtual ICollection<UserClaimEntity> Claims { get; set; } = new List<UserClaimEntity>();
+
+    // Multi-tenancy
+    public virtual TenantEntity? Tenant { get; set; }
 }

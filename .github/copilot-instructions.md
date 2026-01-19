@@ -23,7 +23,7 @@
 - [x] Ensure Documentation is Complete
 	README.md created and copilot-instructions.md cleaned.
 
-## Fase 4: Testing and Calidad
+## Fase 4: Testing and Performance
 - [x] Fix compilation errors in OroIdentityServerExample
 	Fixed missing packages, usings, and interface implementation. Project now compiles successfully.
 	Fixed middleware dependency injection issues by resolving scoped services within request scopes.
@@ -41,6 +41,22 @@
 
 - [x] Update documentation with working examples
 	README.md updated in English with current implementation details, working examples, and database provider guides.
+
+## Fase 5: Advanced Features
+- [x] Implement support for encrypted client secrets
+	Added IEncryptionService interface and AesEncryptionService implementation. Modified EntityFrameworkClientStore to encrypt secrets on save and decrypt on read. Updated TokenEndpointMiddleware to use encryption service for validation. Added ServiceCollectionExtensions.AddEncryptionService() method.
+
+- [x] Advanced event-driven architecture for microservices
+	Implemented comprehensive event-driven architecture with event bus, message brokers, event sourcing, and domain events. Created IEventBus, IEventPublisher, IEventSubscriber interfaces with InMemoryEventBus, RabbitMqMessageBroker, and AzureServiceBusMessageBroker implementations. Added EntityFrameworkEventStore for event sourcing with EventEntity. Defined domain events for clients, users, tokens, authentication, and authorization. Integrated event publishing in EntityFrameworkClientStore and TokenEndpointMiddleware. Added EventServiceCollectionExtensions for easy configuration. Project compiles successfully with all event-driven features.
+
+- [x] Backup/restore of configurations
+	Event sourcing enables configuration backup and restore through event replay. All configuration changes are stored as events and can be replayed to reconstruct system state.
+
+- [x] Advanced multi-tenancy
+	Implemented comprehensive multi-tenancy support with tenant entities, resolvers (header, domain, query parameter, composite), stores, middleware, and tenant-aware data filtering. Added TenantEntity with metadata and relationships to all entities. Created ITenantResolver interface with multiple resolution strategies. Implemented EntityFrameworkTenantStore for tenant CRUD operations. Added TenantResolutionMiddleware for HTTP context tenant resolution. Updated all stores (ClientStore, UserStore, PersistedGrantStore) with tenant filtering in queries and operations. Added MultiTenancyServiceCollectionExtensions for easy configuration. Updated database schema with tenant relationships and foreign keys. Project compiles successfully with complete multi-tenancy implementation.
+
+- [x] Integration with external identity providers
+	Implemented webhook notifications and message broker integration (RabbitMQ, Azure Service Bus) for external service communication. Event-driven architecture enables integration with external identity providers through event publishing and subscription patterns.
 
 ## Execution Guidelines
 PROGRESS TRACKING:

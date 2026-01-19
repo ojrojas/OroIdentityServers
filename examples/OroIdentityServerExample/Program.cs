@@ -32,6 +32,13 @@ public class Program
         builder.Services.AddAutomaticMigrations<ApplicationDbContext>();
         builder.Services.AddTokenCleanupService();
 
+        // Configure event-driven architecture
+        builder.Services.AddInMemoryEventBus();
+        builder.Services.AddEventStore();
+
+        // Configure encryption service for client secrets (optional but recommended)
+        builder.Services.AddEncryptionService("your-secure-encryption-key-change-this-in-production");
+
         // Configure IdentityServer options
         builder.Services.AddSingleton(new IdentityServerOptions
         {
@@ -125,6 +132,7 @@ public static class DatabaseSeeder
             context.IdentityResources.AddRange(
                 new OroIdentityServers.EntityFramework.Entities.IdentityResourceEntity
                 {
+                    TenantId = "default",
                     Name = "openid",
                     DisplayName = "OpenID",
                     Description = "OpenID Connect",
@@ -134,6 +142,7 @@ public static class DatabaseSeeder
                 },
                 new OroIdentityServers.EntityFramework.Entities.IdentityResourceEntity
                 {
+                    TenantId = "default",
                     Name = "profile",
                     DisplayName = "Profile",
                     Description = "User profile information",
@@ -164,6 +173,7 @@ public static class DatabaseSeeder
         {
             var webClient = new OroIdentityServers.EntityFramework.Entities.ClientEntity
             {
+                TenantId = "default",
                 ClientId = "web-client",
                 ClientSecret = "web-secret",
                 ClientName = "Web Client",
@@ -189,6 +199,7 @@ public static class DatabaseSeeder
 
             var apiClient = new OroIdentityServers.EntityFramework.Entities.ClientEntity
             {
+                TenantId = "default",
                 ClientId = "client-credentials-client",
                 ClientSecret = "client-secret",
                 ClientName = "Client Credentials Client",
@@ -207,6 +218,7 @@ public static class DatabaseSeeder
 
             var passwordClient = new OroIdentityServers.EntityFramework.Entities.ClientEntity
             {
+                TenantId = "default",
                 ClientId = "password-client",
                 ClientSecret = "password-secret",
                 ClientName = "Password Client",
@@ -234,6 +246,7 @@ public static class DatabaseSeeder
         {
             var user = new OroIdentityServers.EntityFramework.Entities.UserEntity
             {
+                TenantId = "default",
                 Username = "alice",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
                 Email = "alice@example.com",

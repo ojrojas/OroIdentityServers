@@ -5,6 +5,8 @@ using OroIdentityServers.Core;
 using OroIdentityServers.EntityFramework.DbContexts;
 using OroIdentityServers.EntityFramework.Entities;
 using OroIdentityServers.EntityFramework.Events;
+using OroIdentityServers.EntityFramework.Services;
+using OroIdentityServers.EntityFramework.MultiTenancy;
 
 namespace OroIdentityServers.EntityFramework.Stores;
 
@@ -13,16 +15,25 @@ public class EntityFrameworkClientStore : IClientStore
     private readonly IOroIdentityServerDbContext _context;
     private readonly IDistributedCache? _cache;
     private readonly IConfigurationChangeNotifier? _eventNotifier;
+    private readonly IEncryptionService? _encryptionService;
+    private readonly IEventPublisher? _eventPublisher;
+    private readonly ITenantResolver? _tenantResolver;
     private readonly ConcurrentDictionary<string, Client> _clientCache = new();
 
     public EntityFrameworkClientStore(
         IOroIdentityServerDbContext context,
         IDistributedCache? cache = null,
-        IConfigurationChangeNotifier? eventNotifier = null)
+        IConfigurationChangeNotifier? eventNotifier = null,
+        IEncryptionService? encryptionService = null,
+        IEventPublisher? eventPublisher = null,
+        ITenantResolver? tenantResolver = null)
     {
         _context = context;
         _cache = cache;
         _eventNotifier = eventNotifier;
+        _encryptionService = encryptionService;
+        _eventPublisher = eventPublisher;
+        _tenantResolver = tenantResolver;
     }
 
     public async Task<Client?> FindClientByIdAsync(string clientId)
@@ -49,12 +60,14 @@ public class EntityFrameworkClientStore : IClientStore
         }
 
         // Load from database
+        var tenantId = await GetCurrentTenantIdAsync();
         var clientEntity = await _context.Clients
             .Include(c => c.AllowedGrantTypes)
             .Include(c => c.RedirectUris)
             .Include(c => c.AllowedScopes)
             .Include(c => c.Claims)
-            .FirstOrDefaultAsync(c => c.ClientId == clientId && c.Enabled);
+            .FirstOrDefaultAsync(c => c.ClientId == clientId && c.Enabled &&
+                                    (tenantId == null || c.TenantId == tenantId));
 
         if (clientEntity == null)
         {
@@ -83,7 +96,7 @@ public class EntityFrameworkClientStore : IClientStore
         return new Client
         {
             ClientId = entity.ClientId,
-            ClientSecret = entity.ClientSecret,
+            ClientSecret = _encryptionService?.Decrypt(entity.ClientSecret) ?? entity.ClientSecret,
             ClientName = entity.ClientName,
             AllowedGrantTypes = entity.AllowedGrantTypes.Select(gt => gt.GrantType).ToList(),
             RedirectUris = entity.RedirectUris.Select(ru => ru.RedirectUri).ToList(),
@@ -95,10 +108,12 @@ public class EntityFrameworkClientStore : IClientStore
     // Methods for managing clients with event notifications
     public async Task CreateClientAsync(Client client, string? changedBy = null)
     {
+        var tenantId = await GetCurrentTenantIdAsync() ?? throw new InvalidOperationException("Tenant context is required");
         var entity = new ClientEntity
         {
+            TenantId = tenantId,
             ClientId = client.ClientId,
-            ClientSecret = client.ClientSecret,
+            ClientSecret = _encryptionService?.Encrypt(client.ClientSecret) ?? client.ClientSecret,
             ClientName = client.ClientName,
             Description = client.ClientName,
             Enabled = true,
@@ -165,16 +180,30 @@ public class EntityFrameworkClientStore : IClientStore
             };
             await _eventNotifier.NotifyConfigurationChangedAsync(@event);
         }
+
+        // Publish domain event
+        if (_eventPublisher != null)
+        {
+            var domainEvent = new ClientCreatedEvent
+            {
+                ClientId = client.ClientId,
+                ClientName = client.ClientName,
+                UserId = changedBy,
+                Timestamp = DateTime.UtcNow
+            };
+            await _eventPublisher.PublishToExternalServicesAsync(domainEvent);
+        }
     }
 
     public async Task UpdateClientAsync(Client client, string? changedBy = null)
     {
+        var tenantId = await GetCurrentTenantIdAsync() ?? throw new InvalidOperationException("Tenant context is required");
         var entity = await _context.Clients
             .Include(c => c.AllowedGrantTypes)
             .Include(c => c.RedirectUris)
             .Include(c => c.AllowedScopes)
             .Include(c => c.Claims)
-            .FirstOrDefaultAsync(c => c.ClientId == client.ClientId);
+            .FirstOrDefaultAsync(c => c.ClientId == client.ClientId && c.TenantId == tenantId);
 
         if (entity == null)
         {
@@ -254,11 +283,27 @@ public class EntityFrameworkClientStore : IClientStore
             };
             await _eventNotifier.NotifyConfigurationChangedAsync(@event);
         }
+
+        // Publish domain event
+        if (_eventPublisher != null)
+        {
+            var domainEvent = new ClientUpdatedEvent
+            {
+                ClientId = client.ClientId,
+                ClientName = client.ClientName,
+                UserId = changedBy,
+                Timestamp = DateTime.UtcNow
+            };
+            await _eventPublisher.PublishToExternalServicesAsync(domainEvent);
+        }
     }
 
     public async Task DeleteClientAsync(string clientId, string? changedBy = null)
     {
-        var entity = await _context.Clients.FindAsync(clientId);
+        var tenantId = await GetCurrentTenantIdAsync() ?? throw new InvalidOperationException("Tenant context is required");
+        var entity = await _context.Clients
+            .FirstOrDefaultAsync(c => c.ClientId == clientId && c.TenantId == tenantId);
+
         if (entity != null)
         {
             var oldClient = MapToClient(entity);
@@ -281,6 +326,19 @@ public class EntityFrameworkClientStore : IClientStore
                     OldValues = oldClient
                 };
                 await _eventNotifier.NotifyConfigurationChangedAsync(@event);
+            }
+
+            // Publish domain event
+            if (_eventPublisher != null)
+            {
+                var domainEvent = new ClientDeletedEvent
+                {
+                    ClientId = clientId,
+                    ClientName = oldClient?.ClientName,
+                    UserId = changedBy,
+                    Timestamp = DateTime.UtcNow
+                };
+                await _eventPublisher.PublishToExternalServicesAsync(domainEvent);
             }
         }
     }
@@ -311,5 +369,10 @@ public class EntityFrameworkClientStore : IClientStore
 
         _context.ConfigurationChangeLogs.Add(logEntry);
         await _context.SaveChangesAsync();
+    }
+
+    private async Task<string?> GetCurrentTenantIdAsync()
+    {
+        return _tenantResolver != null ? await _tenantResolver.GetCurrentTenantIdAsync() : null;
     }
 }

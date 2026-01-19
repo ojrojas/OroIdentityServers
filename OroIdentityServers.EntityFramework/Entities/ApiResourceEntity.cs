@@ -11,6 +11,10 @@ public class ApiResourceEntity
     public int Id { get; set; }
 
     [Required]
+    [MaxLength(100)]
+    public required string TenantId { get; set; }
+
+    [Required]
     [MaxLength(200)]
     public required string Name { get; set; }
 
@@ -30,4 +34,7 @@ public class ApiResourceEntity
     public virtual ICollection<ApiResourceClaimEntity> UserClaims { get; set; } = new List<ApiResourceClaimEntity>();
     public virtual ICollection<ApiResourceScopeEntity> Scopes { get; set; } = new List<ApiResourceScopeEntity>();
     public virtual ICollection<ApiResourceSecretEntity> Secrets { get; set; } = new List<ApiResourceSecretEntity>();
+
+    // Multi-tenancy
+    public virtual TenantEntity? Tenant { get; set; }
 }

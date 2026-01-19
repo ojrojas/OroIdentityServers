@@ -33,5 +33,9 @@ public interface IOroIdentityServerDbContext
 
     DbSet<ConfigurationChangeLogEntity> ConfigurationChangeLogs { get; }
 
+    DbSet<EventEntity> Events { get; }
+
+    DbSet<TenantEntity> Tenants { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

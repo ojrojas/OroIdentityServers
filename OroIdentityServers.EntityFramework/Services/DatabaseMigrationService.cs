@@ -63,6 +63,7 @@ public class DatabaseMigrationService<TDbContext> : IHostedService
             {
                 new IdentityResourceEntity
                 {
+                    TenantId = "default",
                     Name = "openid",
                     DisplayName = "OpenID",
                     Description = "OpenID Connect",
@@ -72,6 +73,7 @@ public class DatabaseMigrationService<TDbContext> : IHostedService
                 },
                 new IdentityResourceEntity
                 {
+                    TenantId = "default",
                     Name = "profile",
                     DisplayName = "Profile",
                     Description = "User profile information",
@@ -102,6 +104,7 @@ public class DatabaseMigrationService<TDbContext> : IHostedService
         {
             var webClient = new ClientEntity
             {
+                TenantId = "default",
                 ClientId = "web-client",
                 ClientSecret = "web-secret",
                 ClientName = "Web Client",
@@ -129,6 +132,7 @@ public class DatabaseMigrationService<TDbContext> : IHostedService
 
             var apiClient = new ClientEntity
             {
+                TenantId = "default",
                 ClientId = "client-credentials-client",
                 ClientSecret = "client-secret",
                 ClientName = "Client Credentials Client",
@@ -147,6 +151,7 @@ public class DatabaseMigrationService<TDbContext> : IHostedService
 
             var passwordClient = new ClientEntity
             {
+                TenantId = "default",
                 ClientId = "password-client",
                 ClientSecret = "password-secret",
                 ClientName = "Password Client",
@@ -176,6 +181,7 @@ public class DatabaseMigrationService<TDbContext> : IHostedService
         {
             var user = new UserEntity
             {
+                TenantId = "default",
                 Username = "alice",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
                 Email = "alice@example.com",
