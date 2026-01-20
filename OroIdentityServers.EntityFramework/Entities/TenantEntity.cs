@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace OroIdentityServers.EntityFramework.Entities;
 
 /// <summary>
@@ -58,7 +55,7 @@ public class TenantEntity
     /// <summary>
     /// Tenant-specific configuration (JSON)
     /// </summary>
-    [Column(TypeName = "nvarchar(max)")]
+    [Column(TypeName = "TEXT")]
     public string? Configuration { get; set; }
 
     /// <summary>
@@ -72,9 +69,9 @@ public class TenantEntity
     public DateTime? LastModified { get; set; }
 
     // Navigation properties
-    public virtual ICollection<ClientEntity> Clients { get; set; } = new List<ClientEntity>();
-    public virtual ICollection<UserEntity> Users { get; set; } = new List<UserEntity>();
-    public virtual ICollection<ApiResourceEntity> ApiResources { get; set; } = new List<ApiResourceEntity>();
-    public virtual ICollection<IdentityResourceEntity> IdentityResources { get; set; } = new List<IdentityResourceEntity>();
-    public virtual ICollection<PersistedGrantEntity> PersistedGrants { get; set; } = new List<PersistedGrantEntity>();
+    public virtual ICollection<ClientEntity> Clients { get; set; } = [];
+    public virtual ICollection<UserEntity> Users { get; set; } = [];
+    public virtual ICollection<ApiResourceEntity> ApiResources { get; set; } = [];
+    public virtual ICollection<IdentityResourceEntity> IdentityResources { get; set; } = [];
+    public virtual ICollection<PersistedGrantEntity> PersistedGrants { get; set; } = [];
 }

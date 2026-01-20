@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enabled</ImplicitUsings>
+    <RootNamespace>OroIdentityServerConfigurableExample</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0-preview.1.24081.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0-preview.1.25080.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\OroIdentityServers\OroIdentityServers.csproj" />
+    <ProjectReference Include="..\..\OroIdentityServers.Core\OroIdentityServers.Core.csproj" />
+    <ProjectReference Include="..\..\OroIdentityServers.EntityFramework\OroIdentityServers.EntityFramework.csproj" />
+    <ProjectReference Include="..\..\OroIdentityServers.OAuth\OroIdentityServers.OAuth.csproj" />
+    <ProjectReference Include="..\..\OroIdentityServers.OpenId\OroIdentityServers.OpenId.csproj" />
+  </ItemGroup>
+
+</Project>

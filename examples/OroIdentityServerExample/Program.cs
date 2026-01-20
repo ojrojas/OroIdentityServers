@@ -47,6 +47,13 @@ public class Program
             SecretKey = "your-very-long-secret-key-at-least-32-characters-long"
         });
 
+        // Register TokenService
+        builder.Services.AddSingleton<TokenService>(sp =>
+        {
+            var options = sp.GetRequiredService<IdentityServerOptions>();
+            return new TokenService(options.Issuer, options.Audience, options.SecretKey);
+        });
+
         builder.Services.AddAuthentication("Cookies")
             .AddCookie("Cookies", options =>
             {
@@ -68,6 +75,25 @@ public class Program
                         System.Text.Encoding.UTF8.GetBytes("your-very-long-secret-key-at-least-32-characters-long"))
                 };
             });
+
+        // Configurar políticas de autorización
+        builder.Services.AddAuthorization(options =>
+        {
+            // Política por defecto - usa Cookies para aplicaciones web
+            options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("Cookies")
+                .RequireAuthenticatedUser()
+                .Build();
+
+            // Política para APIs - usa Bearer tokens
+            options.AddPolicy("ApiPolicy", policy =>
+                policy.AddAuthenticationSchemes("Bearer")
+                      .RequireAuthenticatedUser());
+
+            // Política flexible - permite tanto Cookies como Bearer
+            options.AddPolicy("FlexiblePolicy", policy =>
+                policy.AddAuthenticationSchemes("Cookies", "Bearer")
+                      .RequireAuthenticatedUser());
+        });
 
         var app = builder.Build();
 
@@ -113,7 +139,7 @@ public class Program
 
             var claims = user.Claims.Select(c => $"{c.Type}: {c.Value}");
             return $"Hello {user.Identity.Name}! Your claims: {string.Join(", ", claims)}";
-        }).RequireAuthorization(policy => policy.AddAuthenticationSchemes("Bearer").RequireAuthenticatedUser());
+        }).RequireAuthorization("FlexiblePolicy");
 
         app.Run();
     }

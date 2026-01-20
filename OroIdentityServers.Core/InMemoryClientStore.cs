@@ -1,12 +1,8 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace OroIdentityServers.Core;
 
 public class InMemoryClientStore : IClientStore
 {
-    private readonly List<Client> _clients = new();
+    private readonly List<Client> _clients = [];
 
     public InMemoryClientStore(IEnumerable<Client> clients)
     {

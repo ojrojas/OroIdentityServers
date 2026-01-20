@@ -2,11 +2,21 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
+using OroIdentityServerExample;
+using BCrypt.Net;
+using Microsoft.EntityFrameworkCore;
 
 namespace OroIdentityServerExample.Pages;
 
 public class LoginModel : PageModel
 {
+    private readonly ApplicationDbContext _context;
+
+    public LoginModel(ApplicationDbContext context)
+    {
+        _context = context;
+    }
+
     [BindProperty]
     public string Username { get; set; } = string.Empty;
 
@@ -23,15 +33,20 @@ public class LoginModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        // Simple authentication - in real app, validate against database
-        if (Username == "alice" && Password == "password")
+        // Validate against database
+        var userEntity = await _context.Users
+            .Include(u => u.Claims)
+            .FirstOrDefaultAsync(u => u.Username == Username && u.Enabled);
+
+        if (userEntity != null && BCrypt.Net.BCrypt.Verify(Password, userEntity.PasswordHash))
         {
-            var claims = new List<Claim>
+            var claims = userEntity.Claims.Select(c => new Claim(c.Type, c.Value)).ToList();
+            
+            // Ensure NameIdentifier claim exists
+            if (!claims.Any(c => c.Type == ClaimTypes.NameIdentifier))
             {
-                new Claim(ClaimTypes.NameIdentifier, "user1"),
-                new Claim(ClaimTypes.Name, "Alice"),
-                new Claim("email", "alice@example.com")
-            };
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, userEntity.Id.ToString()));
+            }
 
             var identity = new ClaimsIdentity(claims, "Cookies");
             var principal = new ClaimsPrincipal(identity);

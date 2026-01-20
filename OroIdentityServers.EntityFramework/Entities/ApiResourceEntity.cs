@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace OroIdentityServers.EntityFramework.Entities;
 
 [Table("ApiResources")]
@@ -31,9 +28,9 @@ public class ApiResourceEntity
     public DateTime? LastModified { get; set; }
 
     // Navigation properties
-    public virtual ICollection<ApiResourceClaimEntity> UserClaims { get; set; } = new List<ApiResourceClaimEntity>();
-    public virtual ICollection<ApiResourceScopeEntity> Scopes { get; set; } = new List<ApiResourceScopeEntity>();
-    public virtual ICollection<ApiResourceSecretEntity> Secrets { get; set; } = new List<ApiResourceSecretEntity>();
+    public virtual ICollection<ApiResourceClaimEntity> UserClaims { get; set; } = [];
+    public virtual ICollection<ApiResourceScopeEntity> Scopes { get; set; } = [];
+    public virtual ICollection<ApiResourceSecretEntity> Secrets { get; set; } = [];
 
     // Multi-tenancy
     public virtual TenantEntity? Tenant { get; set; }

@@ -6,6 +6,7 @@ A comprehensive, database-agnostic identity server library for ASP.NET Core that
 
 - **OAuth 2.0 & 2.1 Support**: Complete implementation of authorization code, client credentials, password, and PKCE flows
 - **OpenID Connect 1.0**: Full OIDC compliance with discovery, userinfo, and token endpoints
+- **Configurable Endpoints**: Dynamic OAuth endpoint configuration instead of hardcoded paths
 - **Database Agnostic**: Works with SQL Server, PostgreSQL, MySQL, SQLite, and more via EF Core
 - **Entity Framework Integration**: Automatic DbContext extension pattern following OpenIddict conventions
 - **Security Features**: BCrypt password hashing, JWT token validation, CORS support, **encrypted client secrets**
@@ -85,6 +86,59 @@ using (var scope = app.Services.CreateScope())
 app.UseOroIdentityServer();
 app.Run();
 ```
+
+## Configurable OAuth Endpoints
+
+OroIdentityServers now supports configurable OAuth 2.1 / OpenID Connect endpoints instead of hardcoded paths, providing flexibility to customize endpoint behavior and add new endpoints.
+
+### Key Benefits
+
+- **Flexible Paths**: Change endpoint paths without code modifications
+- **Dynamic Configuration**: Enable/disable endpoints based on requirements
+- **Extensible**: Add custom endpoints by implementing `IOAuthEndpointHandler`
+- **Decoupled Architecture**: Authentication logic separated from entity implementations
+
+### Quick Setup
+
+```csharp
+// Add default OAuth endpoints
+builder.Services.AddDefaultOAuthEndpoints();
+
+// Use the configurable middleware
+app.UseOAuthEndpoints();
+```
+
+### Custom Configuration
+
+```csharp
+builder.Services.AddOAuthEndpoints(config =>
+{
+    config.BasePath = "/oauth";
+
+    // Configure token endpoint
+    config.AddEndpoint("token", new OAuthEndpoint
+    {
+        Path = "/token",
+        HttpMethods = ["POST"],
+        Description = "OAuth 2.1 Token Endpoint"
+    });
+
+    // Configure userinfo endpoint
+    config.AddEndpoint("userinfo", new OAuthEndpoint
+    {
+        Path = "/userinfo",
+        HttpMethods = ["GET", "POST"],
+        Description = "OpenID Connect UserInfo Endpoint"
+    });
+});
+```
+
+### Available Endpoints
+
+- `POST /connect/token` - OAuth 2.1 Token endpoint (client_credentials, password grants)
+- `GET/POST /connect/userinfo` - OpenID Connect UserInfo endpoint
+
+See `examples/OroIdentityServerConfigurableExample` for a complete working example.
 
 ## Multi-Tenancy Support
 
@@ -245,7 +299,54 @@ builder.Services.AddOroIdentityServerDbContext<ApplicationDbContext>(options =>
 
 ## Examples
 
-### Client Credentials Flow
+The repository includes several working examples demonstrating different OAuth 2.0 and OpenID Connect flows:
+
+### OroIdentityServerExample
+A complete ASP.NET Core web application with SQLite database demonstrating:
+- Authorization Code flow with PKCE
+- Password flow
+- Client Credentials flow
+- OpenID Connect user authentication
+- Encrypted client secrets
+- Event-driven architecture
+- Multi-tenancy support
+- Automatic database migrations and seeding
+
+**Features:**
+- Interactive login page with database validation
+- Token endpoint with encrypted client secret validation
+- User info endpoint
+- Discovery endpoint
+- Token cleanup service
+
+**Run the example:**
+```bash
+cd examples/OroIdentityServerExample
+dotnet run
+```
+Navigate to `http://localhost:5160` for the demo application.
+
+### OroIdentityServerPostgreSQLExample
+Full PostgreSQL implementation with connection string configuration and database setup.
+
+### OroIdentityServerMultiTenancyExample
+Demonstrates advanced multi-tenancy features with tenant resolution strategies.
+
+### OroIdentityServerPasswordExample
+Simple password flow implementation.
+
+### OroIdentityServerPKCEExample
+PKCE (Proof Key for Code Exchange) flow demonstration.
+
+### OroIdentityServerClientCredentialsExample
+Blazor WebAssembly client credentials flow example.
+
+### OroIdentityServerProtectedAPI
+ASP.NET Core API protected by OroIdentityServers tokens.
+
+### Code Examples
+
+#### Client Credentials Flow
 
 ```csharp
 // Configure client
@@ -335,6 +436,12 @@ The repository includes several working examples:
 - Uses Pomelo.EntityFrameworkCore.MySql provider
 - Optimized for MySQL-specific features
 
+### Multi-Tenancy Example (`OroIdentityServerMultiTenancyExample`)
+- Demonstrates multi-tenant architecture
+- Header-based tenant resolution
+- Tenant-specific clients, users, and resources
+- Event-driven configuration changes
+
 ### Client Credentials Example (`OroIdentityServerClientCredentialsExample`)
 - Blazor WebAssembly client application
 - Demonstrates machine-to-machine authentication
@@ -348,6 +455,11 @@ The repository includes several working examples:
 - Demonstrates Proof Key for Code Exchange
 - Enhanced security for public clients
 - SPA and mobile app authentication
+
+### Protected API Example (`OroIdentityServerProtectedAPI`)
+- ASP.NET Core Web API protected by OroIdentityServer
+- JWT Bearer authentication
+- Demonstrates API protection with token validation
 
 ## API Documentation
 

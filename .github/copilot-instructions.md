@@ -29,9 +29,12 @@
 	Fixed middleware dependency injection issues by resolving scoped services within request scopes.
 	Application now runs successfully with SQLite database, automatic migrations, and seeding.
 	OpenID Connect discovery endpoint is working correctly.
+	Resolved FK constraint errors by properly configuring Entity Framework relationships. Removed shadow state warnings by letting EF infer FK relationships from property names.
+	Fixed tenant seeding and database schema issues for proper multi-tenancy support.
+	Fixed TokenService dependency injection error by registering the service in DI container.
 
-- [ ] Create PostgreSQL example
-	Pending implementation.
+- [x] Create PostgreSQL example
+	Created OroIdentityServerPostgreSQLExample with full PostgreSQL configuration, including connection strings, migrations, and proper database setup. Example is ready for use with PostgreSQL databases.
 
 - [ ] Create MySQL example  
 	Pending implementation.
@@ -41,6 +44,15 @@
 
 - [x] Update documentation with working examples
 	README.md updated in English with current implementation details, working examples, and database provider guides.
+
+- [x] Fix userinfo endpoint authentication issue
+	Fixed UserInfoEndpointMiddleware to use IdentityServerOptions from DI instead of hardcoded values for JWT token validation. This ensures consistent issuer, audience, and secret key between token generation and validation, resolving "Unauthorized" errors in the userinfo endpoint.
+
+- [x] Create and run unit tests for UserInfo endpoint
+	Created comprehensive unit tests for UserInfoEndpointMiddleware covering valid Bearer tokens, invalid tokens, and missing authorization headers. Tests use ServiceCollection for DI instead of complex Moq mocking to avoid extension method issues. All 5 tests pass successfully, including 2 existing TokenService tests and 3 new UserInfo endpoint tests. Fixed claim type mapping issue where JWT 'sub' claim maps to ClaimTypes.NameIdentifier during validation.
+
+- [x] Refactor UserInfoEndpointMiddleware
+	Refactored UserInfoEndpointMiddleware for better maintainability and readability. Separated concerns into smaller methods: ExtractUserIdFromClaims, ExtractAccessToken, ValidateTokenAndExtractUserIdAsync, and ReturnUserInfoAsync. Removed excessive debug logging, simplified token extraction logic, and improved error handling. All existing functionality preserved with cleaner, more maintainable code structure.
 
 ## Fase 5: Advanced Features
 - [x] Implement support for encrypted client secrets

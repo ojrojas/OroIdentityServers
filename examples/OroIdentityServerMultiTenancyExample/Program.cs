@@ -18,6 +18,13 @@ builder.Services.AddOroIdentityServerDbContext<ApplicationDbContext>();
 builder.Services.AddInMemoryEventBus();
 builder.Services.AddEventStore();
 
+// Configure message broker for external integrations (optional)
+// Uncomment and configure for RabbitMQ integration
+// builder.Services.AddRabbitMqMessageBroker(builder.Configuration);
+
+// Configure encryption service for client secrets (optional but recommended)
+builder.Services.AddEncryptionService("your-secure-encryption-key-change-this-in-production");
+
 // Configure multi-tenancy with header-based resolution
 builder.Services.AddMultiTenancy(options =>
 {
@@ -173,6 +180,16 @@ async Task SeedDataAsync(ApplicationDbContext context)
     if (!context.Users.Any())
     {
         context.Users.AddRange(
+            new UserEntity
+            {
+                TenantId = "tenant1",
+                Username = "alice",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
+                Email = "alice@tenant1.com",
+                EmailConfirmed = true,
+                Enabled = true,
+                Created = DateTime.UtcNow
+            },
             new UserEntity
             {
                 TenantId = "tenant1",

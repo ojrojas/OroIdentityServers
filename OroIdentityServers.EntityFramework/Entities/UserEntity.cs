@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace OroIdentityServers.EntityFramework.Entities;
 
 [Table("Users")]
@@ -36,7 +33,7 @@ public class UserEntity
     public DateTime? LastLogin { get; set; }
 
     // Navigation properties
-    public virtual ICollection<UserClaimEntity> Claims { get; set; } = new List<UserClaimEntity>();
+    public virtual ICollection<UserClaimEntity> Claims { get; set; } = [];
 
     // Multi-tenancy
     public virtual TenantEntity? Tenant { get; set; }

@@ -1,11 +1,3 @@
-using System.Net;
-using System.Text.Json;
-using Microsoft.AspNetCore.Http;
-using OroIdentityServers.Core;
-using OroIdentityServers.OAuth;
-using Microsoft.Extensions.DependencyInjection;
-using OroIdentityServers.EntityFramework.Events;
-
 namespace OroIdentityServers;
 
 public class TokenEndpointMiddleware

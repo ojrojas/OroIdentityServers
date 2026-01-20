@@ -1,0 +1,17 @@
+@page
+@model UserInfoModel
+@{
+    ViewData["Title"] = "User Info";
+}
+
+<div class="text-center">
+    <h1 class="display-4">User Information</h1>
+    @if (Model.UserInfo != null)
+    {
+        <pre>@Model.UserInfo</pre>
+    }
+    else
+    {
+        <p>Error: @Model.Error</p>
+    }
+</div>

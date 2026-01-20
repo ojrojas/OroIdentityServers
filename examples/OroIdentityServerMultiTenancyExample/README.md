@@ -8,6 +8,10 @@ This example demonstrates how to configure and use OroIdentityServers with multi
 - Tenant resolution strategies (header, domain, query parameter)
 - Tenant-specific client and user management
 - Data isolation between tenants
+- Encrypted client secrets (AES)
+- Event-driven architecture with in-memory event bus and event store
+- Configuration change events
+- Automatic migrations and token cleanup
 
 ## Configuration
 

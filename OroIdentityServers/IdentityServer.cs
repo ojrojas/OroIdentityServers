@@ -1,17 +1,10 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using OroIdentityServers.Core;
-using OroIdentityServers.OAuth;
-using OroIdentityServers.OpenId;
-using System.Security.Claims;
-
-namespace OroIdentityServers;
+﻿namespace OroIdentityServers;
 
 public class IdentityServer
 {
-    public List<Client> Clients { get; } = new();
-    public List<TokenRequest> TokenRequests { get; } = new();
-    public List<OpenIdConnectRequest> OpenIdRequests { get; } = new();
+    public List<Client> Clients { get; } = [];
+    public List<TokenRequest> TokenRequests { get; } = [];
+    public List<OpenIdConnectRequest> OpenIdRequests { get; } = [];
 
     public void AddClient(Client client)
     {
@@ -29,9 +22,9 @@ public class IdentityServer
                 {
                     ClientId = "client1",
                     ClientSecret = "secret1",
-                    AllowedGrantTypes = new List<string> { "client_credentials", "authorization_code", "refresh_token" },
-                    RedirectUris = new List<string> { "https://localhost:5002/callback" },
-                    AllowedScopes = new List<string> { "openid", "profile", "api" }
+                    AllowedGrantTypes = ["client_credentials", "authorization_code", "refresh_token"],
+                    RedirectUris = ["https://localhost:5002/callback"],
+                    AllowedScopes = ["openid", "profile", "api"]
                 }
             };
             options.Users = new List<User>
@@ -41,7 +34,7 @@ public class IdentityServer
                     Id = "user1",
                     Username = "user1",
                     PasswordHash = "password1", // Simplified
-                    Claims = new List<Claim> { new Claim("name", "user1"), new Claim("email", "user1@example.com") }
+                    Claims = [new Claim("name", "user1"), new Claim("email", "user1@example.com")]
                 }
             };
         });

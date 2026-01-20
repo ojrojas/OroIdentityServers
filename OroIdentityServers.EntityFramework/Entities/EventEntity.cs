@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace OroIdentityServers.EntityFramework.Entities;
 
 /// <summary>
@@ -68,13 +65,13 @@ public class EventEntity
     /// The serialized event data
     /// </summary>
     [Required]
-    [Column(TypeName = "nvarchar(max)")]
+    [Column(TypeName = "TEXT")]
     public required string Data { get; set; }
 
     /// <summary>
     /// Metadata about the event (optional)
     /// </summary>
-    [Column(TypeName = "nvarchar(max)")]
+    [Column(TypeName = "TEXT")]
     public string? Metadata { get; set; }
 
     /// <summary>

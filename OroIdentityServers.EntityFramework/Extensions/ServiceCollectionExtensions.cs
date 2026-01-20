@@ -1,11 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using OroIdentityServers.Core;
-using OroIdentityServers.EntityFramework.DbContexts;
-using OroIdentityServers.EntityFramework.Entities;
-using OroIdentityServers.EntityFramework.Events;
-using OroIdentityServers.EntityFramework.Services;
-using OroIdentityServers.EntityFramework.Stores;
+
 
 namespace OroIdentityServers.EntityFramework.Extensions;
 
@@ -163,6 +156,7 @@ public static class ModelBuilderExtensions
         // Configure entities
         ConfigureClients(modelBuilder, schema);
         ConfigureUsers(modelBuilder, schema);
+        ConfigureTenants(modelBuilder, schema);
         ConfigurePersistedGrants(modelBuilder, schema);
         ConfigureResources(modelBuilder, schema);
         ConfigureConfigurationChangeLogs(modelBuilder, schema);
@@ -181,6 +175,9 @@ public static class ModelBuilderExtensions
             entity.Property(e => e.ClientName).HasMaxLength(200);
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.Created).HasDefaultValueSql("GETUTCDATE()");
+
+            // Configure FK relationship
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey("TenantId").HasPrincipalKey(t => t.TenantId);
         });
 
         modelBuilder.Entity<ClientGrantTypeEntity>(entity =>
@@ -227,6 +224,9 @@ public static class ModelBuilderExtensions
             entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Email).HasMaxLength(200);
             entity.Property(e => e.Created).HasDefaultValueSql("GETUTCDATE()");
+
+            // Configure FK relationship
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey("TenantId").HasPrincipalKey(t => t.TenantId);
         });
 
         modelBuilder.Entity<UserClaimEntity>(entity =>
@@ -236,6 +236,23 @@ public static class ModelBuilderExtensions
             entity.Property(e => e.Type).IsRequired().HasMaxLength(250);
             entity.Property(e => e.Value).IsRequired().HasMaxLength(250);
             entity.HasOne(e => e.User).WithMany(u => u.Claims).HasForeignKey(e => e.UserId);
+        });
+    }
+
+    private static void ConfigureTenants(ModelBuilder modelBuilder, string? schema)
+    {
+        modelBuilder.Entity<TenantEntity>(entity =>
+        {
+            if (!string.IsNullOrEmpty(schema)) entity.ToTable("Tenants", schema);
+            entity.HasKey(e => e.TenantId);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd(); // Auto-increment for SQLite
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Domain).HasMaxLength(200);
+            entity.Property(e => e.Created).HasDefaultValueSql("GETUTCDATE()");
+
+            // Make TenantId unique
+            entity.HasIndex(e => e.TenantId).IsUnique();
         });
     }
 
@@ -253,6 +270,9 @@ public static class ModelBuilderExtensions
             entity.Property(e => e.Description).HasMaxLength(200);
             entity.Property(e => e.CreationTime).HasDefaultValueSql("GETUTCDATE()");
 
+            // Configure FK relationship
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey(e => e.TenantId).HasPrincipalKey(t => t.TenantId);
+
             // Indexes
             entity.HasIndex(e => new { e.SubjectId, e.ClientId, e.Type });
             entity.HasIndex(e => e.Expiration);
@@ -269,6 +289,9 @@ public static class ModelBuilderExtensions
             entity.Property(e => e.DisplayName).HasMaxLength(200);
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.Created).HasDefaultValueSql("GETUTCDATE()");
+
+            // Configure FK relationship
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey("TenantId").HasPrincipalKey(t => t.TenantId);
         });
 
         modelBuilder.Entity<IdentityResourceClaimEntity>(entity =>
@@ -287,6 +310,9 @@ public static class ModelBuilderExtensions
             entity.Property(e => e.DisplayName).HasMaxLength(200);
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.Created).HasDefaultValueSql("GETUTCDATE()");
+
+            // Configure FK relationship
+            entity.HasOne(e => e.Tenant).WithMany().HasForeignKey("TenantId").HasPrincipalKey(t => t.TenantId);
         });
 
         modelBuilder.Entity<ApiResourceClaimEntity>(entity =>
