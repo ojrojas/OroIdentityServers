@@ -1,9 +1,5 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OroIdentityServers.EntityFramework.Entities;
-using BCrypt.Net;
 
 namespace OroIdentityServers.EntityFramework.Services;
 
@@ -56,6 +52,21 @@ public class DatabaseMigrationService<TDbContext> : IHostedService
 
     private async Task SeedDatabaseAsync(DbContext dbContext, CancellationToken cancellationToken)
     {
+        // Seed tenants
+        if (!await dbContext.Set<TenantEntity>().AnyAsync(cancellationToken))
+        {
+            await dbContext.Set<TenantEntity>().AddAsync(new TenantEntity
+            {
+                Id = 1, // Explicitly set Id for SQLite
+                TenantId = "default",
+                Name = "Default Tenant",
+                Domain = "localhost",
+                Enabled = true,
+                Created = DateTime.UtcNow
+            }, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         // Seed identity resources
         if (!await dbContext.Set<IdentityResourceEntity>().AnyAsync(cancellationToken))
         {

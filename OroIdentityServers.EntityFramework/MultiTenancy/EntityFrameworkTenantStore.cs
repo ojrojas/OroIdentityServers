@@ -1,7 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using OroIdentityServers.EntityFramework.DbContexts;
-using OroIdentityServers.EntityFramework.Entities;
-
 namespace OroIdentityServers.EntityFramework.MultiTenancy;
 
 /// <summary>

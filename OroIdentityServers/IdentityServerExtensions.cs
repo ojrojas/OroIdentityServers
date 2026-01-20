@@ -1,7 +1,3 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using OroIdentityServers.Core;
-
 namespace OroIdentityServers;
 
 public static class IdentityServerExtensions

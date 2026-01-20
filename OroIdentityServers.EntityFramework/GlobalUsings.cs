@@ -1,0 +1,16 @@
+global using Microsoft.EntityFrameworkCore;
+global using OroIdentityServers.EntityFramework.Entities;
+global using System.ComponentModel.DataAnnotations;
+global using System.ComponentModel.DataAnnotations.Schema;
+global using System.Collections.Concurrent;
+global using System.Text;
+global using System.Text.Json;
+global using OroIdentityServers.EntityFramework.DbContexts;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using OroIdentityServers.EntityFramework.Events;
+global using Microsoft.AspNetCore.Builder;
+global using OroIdentityServers.EntityFramework.MultiTenancy;
+global using OroIdentityServers.EntityFramework.Services;
+global using OroIdentityServers.EntityFramework.Stores;
+global using OroIdentityServers.Core;

@@ -1,6 +1,3 @@
-using System.Security.Claims;
-using System.Threading.Tasks;
-
 namespace OroIdentityServers.Core;
 
 public interface IUser
@@ -22,7 +19,7 @@ public class User : IUser
     public required string Id { get; set; }
     public required string Username { get; set; }
     public required string PasswordHash { get; set; } // In production, use secure hash
-    public List<Claim> Claims { get; set; } = new();
+    public List<Claim> Claims { get; set; } = [];
 
     IEnumerable<Claim> IUser.Claims => Claims;
 

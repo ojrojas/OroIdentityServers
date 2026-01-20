@@ -1,6 +1,3 @@
-using System.Collections.Concurrent;
-using OroIdentityServers.EntityFramework.Events;
-
 namespace OroIdentityServers.EntityFramework.Stores;
 
 public class InMemoryConfigurationChangeNotifier : IConfigurationChangeNotifier
@@ -11,7 +8,7 @@ public class InMemoryConfigurationChangeNotifier : IConfigurationChangeNotifier
     public async Task NotifyConfigurationChangedAsync(ConfigurationChangedEvent @event)
     {
         // Store the event
-        var events = _events.GetOrAdd(@event.EntityType, _ => new List<ConfigurationChangedEvent>());
+        var events = _events.GetOrAdd(@event.EntityType, _ => []);
         events.Add(@event);
 
         // Keep only recent events (last 1000)

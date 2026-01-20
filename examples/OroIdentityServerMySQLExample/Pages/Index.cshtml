@@ -1,0 +1,23 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">OroIdentityServer Example</h1>
+    <p>This is an example of using OroIdentityServers library.</p>
+
+    @if (User.Identity?.IsAuthenticated ?? false)
+    {
+        <p>Welcome, @User.Identity.Name!</p>
+        <a href="/profile" class="btn btn-primary me-2">View Profile</a>
+        <form method="post" asp-page-handler="Logout" class="d-inline">
+            <button type="submit" class="btn btn-danger">Logout</button>
+        </form>
+    }
+    else
+    {
+        <a href="/connect/authorize?client_id=web-client&response_type=code&redirect_uri=http://localhost:5160/callback&scope=openid profile" class="btn btn-primary">Login with Authorization Code</a>
+    }
+</div>

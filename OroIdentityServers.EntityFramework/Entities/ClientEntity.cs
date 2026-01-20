@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace OroIdentityServers.EntityFramework.Entities;
 
 [Table("Clients")]
@@ -35,10 +32,10 @@ public class ClientEntity
     public DateTime? LastModified { get; set; }
 
     // Navigation properties
-    public virtual ICollection<ClientGrantTypeEntity> AllowedGrantTypes { get; set; } = new List<ClientGrantTypeEntity>();
-    public virtual ICollection<ClientRedirectUriEntity> RedirectUris { get; set; } = new List<ClientRedirectUriEntity>();
-    public virtual ICollection<ClientScopeEntity> AllowedScopes { get; set; } = new List<ClientScopeEntity>();
-    public virtual ICollection<ClientClaimEntity> Claims { get; set; } = new List<ClientClaimEntity>();
+    public virtual ICollection<ClientGrantTypeEntity> AllowedGrantTypes { get; set; } = [];
+    public virtual ICollection<ClientRedirectUriEntity> RedirectUris { get; set; } = [];
+    public virtual ICollection<ClientScopeEntity> AllowedScopes { get; set; } = [];
+    public virtual ICollection<ClientClaimEntity> Claims { get; set; } = [];
 
     // Multi-tenancy
     public virtual TenantEntity? Tenant { get; set; }

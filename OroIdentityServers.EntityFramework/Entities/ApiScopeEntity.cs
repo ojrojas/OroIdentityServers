@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace OroIdentityServers.EntityFramework.Entities;
 
 [Table("ApiScopes")]
@@ -29,5 +26,5 @@ public class ApiScopeEntity
     public DateTime? LastModified { get; set; }
 
     // Navigation properties
-    public virtual ICollection<ApiScopeClaimEntity> UserClaims { get; set; } = new List<ApiScopeClaimEntity>();
+    public virtual ICollection<ApiScopeClaimEntity> UserClaims { get; set; } = [];
 }

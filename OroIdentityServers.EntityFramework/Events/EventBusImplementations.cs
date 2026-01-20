@@ -1,5 +1,4 @@
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
+
 
 namespace OroIdentityServers.EntityFramework.Events;
 
@@ -27,7 +26,7 @@ public class InMemoryEventBus : IEventBus
     public Task SubscribeAsync<TEvent>(Func<TEvent, Task> handler) where TEvent : IEvent
     {
         var eventType = typeof(TEvent);
-        var handlerList = _handlers.GetOrAdd(eventType, _ => new List<Delegate>());
+        var handlerList = _handlers.GetOrAdd(eventType, _ => []);
         handlerList.Add(handler);
         return Task.CompletedTask;
     }
@@ -67,7 +66,7 @@ public class RabbitMqMessageBroker : IMessageBroker
 
     public async Task SubscribeAsync(string topic, Func<IEvent, Task> handler)
     {
-        var handlers = _subscriptions.GetOrAdd(topic, _ => new List<Func<IEvent, Task>>());
+        var handlers = _subscriptions.GetOrAdd(topic, _ => []);
         handlers.Add(handler);
 
         // TODO: Implement RabbitMQ subscription
@@ -106,7 +105,7 @@ public class AzureServiceBusMessageBroker : IMessageBroker
 
     public async Task SubscribeAsync(string topic, Func<IEvent, Task> handler)
     {
-        var handlers = _subscriptions.GetOrAdd(topic, _ => new List<Func<IEvent, Task>>());
+        var handlers = _subscriptions.GetOrAdd(topic, _ => []);
         handlers.Add(handler);
 
         // TODO: Implement Azure Service Bus subscription
