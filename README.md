@@ -17,8 +17,25 @@ A comprehensive, database-agnostic identity server library for ASP.NET Core that
 
 ### 1. Install the Package
 
+**Note:** OroIdentityServers is currently a source-code library. You can either:
+
+**Option A: Reference the projects directly (Recommended for development)**
+```bash
+# Clone the repository
+git clone https://github.com/your-repo/OroIdentityServers.git
+
+# Add project references to your solution
+dotnet add reference ../OroIdentityServers/OroIdentityServers.EntityFramework/OroIdentityServers.EntityFramework.csproj
+dotnet add reference ../OroIdentityServers/OroIdentityServers/OroIdentityServers.csproj
+```
+
+**Option B: Use as source code in your project**
+Copy the relevant projects from the `OroIdentityServers/` directory into your solution.
+
+**Option C: Future NuGet packages (when published)**
 ```bash
 dotnet add package OroIdentityServers.EntityFramework
+dotnet add package OroIdentityServers
 ```
 
 ### 2. Configure Services
@@ -34,6 +51,10 @@ builder.Services.AddOroIdentityServerDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddOroIdentityServer<ApplicationDbContext>();
 ```
+
+**Required Project References:**
+- `OroIdentityServers.EntityFramework` - Entity Framework integration and stores
+- `OroIdentityServers` - Core identity server functionality
 
 ### Encrypted Client Secrets
 
@@ -299,7 +320,33 @@ builder.Services.AddOroIdentityServerDbContext<ApplicationDbContext>(options =>
 
 ## Examples
 
-The repository includes several working examples demonstrating different OAuth 2.0 and OpenID Connect flows:
+The repository includes several working examples demonstrating different OAuth 2.0 and OpenID Connect flows. Each example shows how to reference the OroIdentityServers projects directly.
+
+### Running Examples
+
+```bash
+# Clone the repository with submodules if needed
+git clone https://github.com/your-repo/OroIdentityServers.git
+cd OroIdentityServers
+
+# Run any example
+cd examples/OroIdentityServerExample
+dotnet run
+```
+
+### Example Projects Structure
+
+Each example references the OroIdentityServers projects directly in their `.csproj` files:
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\..\OroIdentityServers\OroIdentityServers.csproj" />
+  <ProjectReference Include="..\..\OroIdentityServers.Core\OroIdentityServers.Core.csproj" />
+  <ProjectReference Include="..\..\OroIdentityServers.EntityFramework\OroIdentityServers.EntityFramework.csproj" />
+  <ProjectReference Include="..\..\OroIdentityServers.OAuth\OroIdentityServers.OAuth.csproj" />
+  <ProjectReference Include="..\..\OroIdentityServers.OpenId\OroIdentityServers.OpenId.csproj" />
+</ItemGroup>
+```
 
 ### OroIdentityServerExample
 A complete ASP.NET Core web application with SQLite database demonstrating:
@@ -676,14 +723,8 @@ MIT License - see LICENSE file for details.
 - Documentation: [Wiki](https://github.com/your-repo/wiki)
 - Discussions: [GitHub Discussions](https://github.com/your-repo/discussions)
 
-## Roadmap
+## Project Status
 
-- [ ] Enhanced UI components for login/consent
-- [ ] SAML 2.0 support
-- [ ] Multi-tenant architecture
-- [ ] Advanced audit logging
-- [ ] Integration with ASP.NET Core Identity
-- [ ] Docker containerization
-- [ ] Kubernetes deployment templates
-- [ ] Performance monitoring and metrics
-- [ ] FAPI (Financial-grade API) compliance
+**Note:** OroIdentityServers is currently in active development. The library is provided as source code that you can reference directly in your projects. NuGet packages will be published once the API is stabilized.
+
+For the latest updates and roadmap, see the [GitHub Issues](https://github.com/your-repo/issues) and [Discussions](https://github.com/your-repo/discussions).
