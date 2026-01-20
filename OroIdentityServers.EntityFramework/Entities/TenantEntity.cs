@@ -55,7 +55,7 @@ public class TenantEntity
     /// <summary>
     /// Tenant-specific configuration (JSON)
     /// </summary>
-    [Column(TypeName = "nvarchar(max)")]
+    [Column(TypeName = "TEXT")]
     public string? Configuration { get; set; }
 
     /// <summary>

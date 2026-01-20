@@ -5,6 +5,7 @@
     <Project Path="examples/OroIdentityServerMultiTenancyExample/OroIdentityServerMultiTenancyExample.csproj" />
     <Project Path="examples/OroIdentityServerPasswordExample/OroIdentityServerPasswordExample.csproj" />
     <Project Path="examples/OroIdentityServerPKCEExample/OroIdentityServerPKCEExample.csproj" />
+    <Project Path="examples/OroIdentityServerProtectedAPI/OroIdentityServerProtectedAPI.csproj" />
   </Folder>
   <Folder Name="/examples/OroIdentityServerExample/" />
   <Folder Name="/examples/OroIdentityServerExample/EFExample/">

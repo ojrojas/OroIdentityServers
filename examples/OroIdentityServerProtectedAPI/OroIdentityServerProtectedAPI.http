@@ -1,0 +1,12 @@
+@OroIdentityServerProtectedAPI_HostAddress = http://localhost:5295
+
+GET {{OroIdentityServerProtectedAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+
+GET {{OroIdentityServerProtectedAPI_HostAddress}}/userInfo/
+Accept: application/json
+
+##

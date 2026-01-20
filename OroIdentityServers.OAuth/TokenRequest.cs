@@ -9,4 +9,7 @@ public class TokenRequest
     public string RedirectUri { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;
     public List<string> Scopes { get; set; } = [];
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string Scope { get; set; } = string.Empty;
 }

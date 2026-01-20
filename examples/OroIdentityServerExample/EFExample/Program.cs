@@ -4,6 +4,7 @@ using OroIdentityServers.Core;
 using OroIdentityServers.EntityFramework.DbContexts;
 using OroIdentityServers.EntityFramework.Extensions;
 using OroIdentityServers.EntityFramework.Entities;
+using BCrypt.Net;
 
 public class ProgramEntityFramework
 {
@@ -90,7 +91,7 @@ async Task SeedInitialDataAsync(OroIdentityServerDbContext dbContext)
         {
             TenantId = "default",
             Username = "alice",
-            PasswordHash = "password", // In production, use proper hashing
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
             Email = "alice@example.com",
             EmailConfirmed = true,
             Enabled = true,

@@ -52,6 +52,21 @@ public class DatabaseMigrationService<TDbContext> : IHostedService
 
     private async Task SeedDatabaseAsync(DbContext dbContext, CancellationToken cancellationToken)
     {
+        // Seed tenants
+        if (!await dbContext.Set<TenantEntity>().AnyAsync(cancellationToken))
+        {
+            await dbContext.Set<TenantEntity>().AddAsync(new TenantEntity
+            {
+                Id = 1, // Explicitly set Id for SQLite
+                TenantId = "default",
+                Name = "Default Tenant",
+                Domain = "localhost",
+                Enabled = true,
+                Created = DateTime.UtcNow
+            }, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         // Seed identity resources
         if (!await dbContext.Set<IdentityResourceEntity>().AnyAsync(cancellationToken))
         {

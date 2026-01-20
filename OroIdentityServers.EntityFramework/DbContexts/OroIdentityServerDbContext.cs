@@ -290,8 +290,8 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
             entity.Property(e => e.CorrelationId).HasMaxLength(200);
             entity.Property(e => e.CausationId).HasMaxLength(200);
             entity.Property(e => e.UserId).HasMaxLength(200);
-            entity.Property(e => e.Data).IsRequired().HasColumnType("nvarchar(max)");
-            entity.Property(e => e.Metadata).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Data).IsRequired().HasColumnType("TEXT");
+            entity.Property(e => e.Metadata).HasColumnType("TEXT");
             entity.Property(e => e.IsProcessed).HasDefaultValue(false);
 
             // Indexes for performance
@@ -312,7 +312,7 @@ public class OroIdentityServerDbContext : DbContext, IOroIdentityServerDbContext
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.Domain).HasMaxLength(200);
             entity.Property(e => e.ConnectionString).HasMaxLength(2000);
-            entity.Property(e => e.Configuration).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Configuration).HasColumnType("TEXT");
             entity.Property(e => e.Enabled).HasDefaultValue(true);
             entity.Property(e => e.IsIsolated).HasDefaultValue(false);
             entity.Property(e => e.Created).HasDefaultValueSql("GETUTCDATE()");

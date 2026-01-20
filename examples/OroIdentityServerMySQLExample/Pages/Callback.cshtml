@@ -1,0 +1,19 @@
+@page
+@model CallbackModel
+@{
+    ViewData["Title"] = "Callback";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Authorization Code Received</h1>
+    @if (Model.Code != null)
+    {
+        <p>Code: @Model.Code</p>
+        <p>State: @Model.State</p>
+        <p><a href="/exchange?code=@Model.Code&state=@Model.State" class="btn btn-success">Exchange Code for Tokens</a></p>
+    }
+    else
+    {
+        <p>Error: @Model.Error</p>
+    }
+</div>
